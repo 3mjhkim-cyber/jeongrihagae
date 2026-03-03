@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#AAD9F0"/>
+      <stop offset="100%" stop-color="#58AED6"/>
+    </radialGradient>
+    <!-- clip to circle -->
+    <clipPath id="circle-clip">
+      <circle cx="32" cy="32" r="32"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+
+  <!--
+    Lucide scissors (24×24 viewBox) centered & scaled inside the 64×64 circle.
+    Original Lucide paths use stroke, no fill.
+    We translate so the scissors center (~12, 12) maps to (32, 32), then scale 1.75×.
+  -->
+  <g transform="translate(32,32) scale(1.72) translate(-12,-12)"
+     stroke="white" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+    <!-- top handle ring -->
+    <circle cx="6" cy="6" r="3"/>
+    <!-- top blade: from handle edge to pivot -->
+    <path d="M8.12 8.12 12 12"/>
+    <!-- long diagonal blade: from top-right tip across to bottom pivot -->
+    <path d="M20 4 8.12 15.88"/>
+    <!-- bottom handle ring -->
+    <circle cx="6" cy="18" r="3"/>
+    <!-- bottom blade: from pivot to bottom-right tip -->
+    <path d="M14.8 14.8 20 20"/>
+  </g>
+</svg>
