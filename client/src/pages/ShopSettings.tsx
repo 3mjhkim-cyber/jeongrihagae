@@ -108,15 +108,7 @@ export default function ShopSettings() {
   };
 
   const isSubscriptionActive = shop?.subscriptionStatus === 'active';
-  const subscriptionLabel =
-    shop?.subscriptionStatus === 'active' ? '활성' :
-    shop?.subscriptionStatus === 'expired' ? '만료' :
-    shop?.subscriptionStatus === 'cancelled' ? '취소됨' : '미구독';
-
-  const planLabel =
-    shop?.subscriptionTier === 'basic' ? '베이직' :
-    shop?.subscriptionTier === 'premium' ? '프리미엄' :
-    shop?.subscriptionTier === 'enterprise' ? '엔터프라이즈' : '';
+  const subscriptionLabel = isSubscriptionActive ? '활성' : '비활성';
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-20">
@@ -203,7 +195,7 @@ export default function ShopSettings() {
             </CardTitle>
             <CardDescription>
               {isSubscriptionActive
-                ? `${planLabel} 플랜 이용 중`
+                ? '스탠다드 플랜 이용 중'
                 : '구독을 활성화하여 서비스를 이용하세요'}
             </CardDescription>
           </CardHeader>
