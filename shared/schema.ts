@@ -110,6 +110,37 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ─── 사용자별 구독 빌링 (단일 플랜 29,000원/월) ────────────────────────────────
+// status 흐름:
+//   trialing → pending_payment (D-3 또는 체험 만료) → active (첫 결제 성공)
+//                                                    → past_due (결제 실패/재시도)
+//                                                    → cancelled (해지)
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  status: text("status").default("trialing").notNull(),
+  trialStartDate: timestamp("trial_start_date").notNull(),
+  trialEndDate: timestamp("trial_end_date").notNull(),
+  billingKey: text("billing_key"),           // nullable: 카드 등록 전까지 null
+  nextBillingDate: timestamp("next_billing_date"), // 다음 정기결제일 (nullable)
+  lastBillingAt: timestamp("last_billing_at"),     // 마지막 성공 결제일시 (nullable)
+  failCount: integer("fail_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const userPayments = pgTable("user_payments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  amount: integer("amount").notNull(),          // 29000
+  attemptedAt: timestamp("attempted_at").notNull(),
+  paidAt: timestamp("paid_at"),                 // nullable: 실패 시 null
+  result: text("result").notNull(),             // success | fail
+  providerTxId: text("provider_tx_id").notNull(),
+  failReason: text("fail_reason"),              // nullable
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, isApproved: true, subscriptionStatus: true, subscriptionStart: true, subscriptionEnd: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, visitCount: true, lastVisit: true, firstVisitDate: true, createdAt: true, updatedAt: true });
@@ -129,3 +160,8 @@ export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type UserPayment = typeof userPayments.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+export type InsertUserPayment = typeof userPayments.$inferInsert;

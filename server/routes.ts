@@ -10,6 +10,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
+import { chargeBillingKey, PLAN_PRICE } from "./billing";
+import { addOneMonth } from "./scheduler";
 
 const scryptAsync = promisify(scrypt);
 
@@ -1250,6 +1252,184 @@ export async function registerRoutes(
     );
 
     res.json(stats);
+  });
+
+  // ===== 사용자 구독 빌링 API (단일 플랜 29,000원/월) =====
+
+  /**
+   * GET /api/subscription
+   * 현재 로그인 사용자의 구독 상태 조회.
+   * 프론트엔드에서 배너·락 표시 여부 결정에 사용.
+   */
+  app.get('/api/subscription', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const sub = await storage.getUserSubscription(user.id);
+    if (!sub) return res.json({ status: 'none' });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const trialEnd = new Date(sub.trialEndDate);
+    trialEnd.setHours(0, 0, 0, 0);
+    const daysUntilTrialEnd = Math.ceil(
+      (trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    res.json({
+      status: sub.status,
+      trialStartDate: sub.trialStartDate,
+      trialEndDate: sub.trialEndDate,
+      nextBillingDate: sub.nextBillingDate,
+      lastBillingAt: sub.lastBillingAt,
+      failCount: sub.failCount,
+      planPrice: PLAN_PRICE,
+      // 프론트엔드 편의: 체험 남은 일수 (음수면 만료)
+      daysUntilTrialEnd,
+      // D-3 경고 표시 조건
+      showPaymentNudge:
+        sub.status === 'trialing' && daysUntilTrialEnd <= 3,
+      isLocked:
+        sub.status === 'pending_payment' || sub.status === 'past_due',
+    });
+  });
+
+  /**
+   * POST /api/subscription/start-trial
+   * 무료체험 시작 (카드 등록 없이).
+   * 이미 구독이 있으면 현재 구독을 그대로 반환 (멱등).
+   */
+  app.post('/api/subscription/start-trial', requireAuth, async (req, res) => {
+    const user = req.user as any;
+
+    // 멱등: 이미 구독이 존재하면 반환
+    const existing = await storage.getUserSubscription(user.id);
+    if (existing) {
+      return res.json({ subscription: existing, created: false });
+    }
+
+    const trialStartDate = new Date();
+    const trialEndDate = new Date(trialStartDate);
+    trialEndDate.setDate(trialEndDate.getDate() + 30);
+
+    const sub = await storage.createUserSubscription({
+      userId: user.id,
+      status: 'trialing',
+      trialStartDate,
+      trialEndDate,
+      billingKey: null,
+      nextBillingDate: null,
+      lastBillingAt: null,
+      failCount: 0,
+    });
+
+    res.status(201).json({ subscription: sub, created: true });
+  });
+
+  /**
+   * POST /api/subscription/attach-card-and-pay
+   * 빌링키 저장 + 즉시 첫 결제 + active 전환.
+   *
+   * Body: { billingKey: string }
+   *   billingKey: PortOne SDK 로 클라이언트에서 발급한 빌링키
+   *
+   * 중복결제 방지:
+   *   - status=active 이고 last_billing_at 이 오늘이면 이미 결제됨 → 현재 상태 반환
+   *   - DB 트랜잭션 수준 보호는 unique(userId) 인덱스 + 상태 체크로 처리
+   */
+  app.post('/api/subscription/attach-card-and-pay', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const { billingKey } = req.body as { billingKey?: string };
+
+    if (!billingKey || typeof billingKey !== 'string') {
+      return res.status(400).json({ message: 'billingKey 가 필요합니다.' });
+    }
+
+    let sub = await storage.getUserSubscription(user.id);
+    if (!sub) {
+      return res.status(404).json({
+        message: '구독을 먼저 시작해주세요. (POST /api/subscription/start-trial)',
+      });
+    }
+
+    // 이미 active 이고 오늘 결제된 경우 → 중복결제 방지
+    if (sub.status === 'active' && sub.lastBillingAt) {
+      const lastBillingDay = new Date(sub.lastBillingAt);
+      lastBillingDay.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (lastBillingDay.getTime() === today.getTime()) {
+        return res.json({ subscription: sub, alreadyPaid: true });
+      }
+    }
+
+    // 빌링키 저장 (결제 전 먼저 저장하여 키를 보존)
+    sub = (await storage.updateUserSubscription(sub.id, { billingKey }))!;
+
+    // 첫 결제 시도
+    const orderId = `sub_${user.id}_${randomBytes(6).toString('hex')}`;
+    const now = new Date();
+    const result = await chargeBillingKey(billingKey, user.id, orderId);
+
+    // 결제 내역 기록
+    await storage.createUserPayment({
+      userId: user.id,
+      amount: PLAN_PRICE,
+      attemptedAt: now,
+      paidAt: result.success ? now : null,
+      result: result.success ? 'success' : 'fail',
+      providerTxId: result.txId,
+      failReason: result.failReason ?? null,
+    });
+
+    if (result.success) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      sub = (await storage.updateUserSubscription(sub.id, {
+        status: 'active',
+        lastBillingAt: now,
+        nextBillingDate: addOneMonth(today),
+        failCount: 0,
+      }))!;
+      return res.json({ subscription: sub, paymentSuccess: true });
+    } else {
+      // 첫 결제 실패: 빌링키는 저장된 상태로 두고 에러 반환
+      return res.status(402).json({
+        message: `결제에 실패했습니다: ${result.failReason}`,
+        subscription: sub,
+        paymentSuccess: false,
+      });
+    }
+  });
+
+  /**
+   * POST /api/subscription/cancel
+   * 구독 해지 (즉시 cancelled, 다음 결제부터 중단).
+   * 현재 기간의 서비스는 next_billing_date 까지 계속 이용 가능.
+   */
+  app.post('/api/subscription/cancel', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const sub = await storage.getUserSubscription(user.id);
+    if (!sub) {
+      return res.status(404).json({ message: '구독 정보가 없습니다.' });
+    }
+    if (sub.status === 'cancelled') {
+      return res.json({ subscription: sub, message: '이미 해지된 구독입니다.' });
+    }
+
+    const updated = await storage.updateUserSubscription(sub.id, {
+      status: 'cancelled',
+      nextBillingDate: null,
+    });
+    res.json({ subscription: updated });
+  });
+
+  /**
+   * GET /api/subscription/payments
+   * 결제 내역 조회 (최신순).
+   */
+  app.get('/api/subscription/payments', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const payments = await storage.getUserPayments(user.id);
+    res.json(payments);
   });
 
   // ===== 구독 API =====

@@ -1,4 +1,4 @@
-import { users, services, bookings, customers, shops, subscriptions, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription } from "@shared/schema";
+import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, and, count, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -64,13 +64,28 @@ export interface IStorage {
     byDayOfWeek: { dayOfWeek: number; revenue: number; count: number }[];
   }>;
 
-  // Subscription
+  // Subscription (shop-level, 기존)
   createSubscription(data: any): Promise<Subscription>;
   getAllSubscriptions(): Promise<Subscription[]>;
   getSubscriptionsByShop(shopId: number): Promise<Subscription[]>;
   updateShopSubscription(shopId: number, data: { subscriptionStatus?: string; subscriptionTier?: string; subscriptionStart?: Date; subscriptionEnd?: Date }): Promise<void>;
   updateSubscriptionPaymentMethod(subscriptionId: number, paymentMethod: string): Promise<void>;
   cancelLatestSubscription(shopId: number): Promise<void>;
+
+  // ─── 사용자 구독 빌링 (신규) ───────────────────────────────────────────────
+  getUserSubscription(userId: number): Promise<UserSubscription | undefined>;
+  createUserSubscription(data: InsertUserSubscription): Promise<UserSubscription>;
+  updateUserSubscription(id: number, data: Partial<UserSubscription>): Promise<UserSubscription | undefined>;
+
+  // 결제 내역
+  createUserPayment(data: InsertUserPayment): Promise<UserPayment>;
+  getUserPayments(userId: number): Promise<UserPayment[]>;
+
+  // 스케줄러용 조회
+  /** status=trialing 이고 trial_end_date <= limitDate 인 구독 목록 (만료 D-3 포함) */
+  getExpiringTrials(limitDate: Date): Promise<UserSubscription[]>;
+  /** next_billing_date <= today 이고 status IN ('active','past_due') 인 구독 목록 */
+  getDueSubscriptions(today: Date): Promise<UserSubscription[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -762,6 +777,70 @@ export class DatabaseStorage implements IStorage {
       const latest = subs[subs.length - 1];
       await db.update(subscriptions).set({ autoRenew: false }).where(eq(subscriptions.id, latest.id));
     }
+  }
+
+  // ─── 사용자 구독 빌링 (신규) ───────────────────────────────────────────────
+
+  async getUserSubscription(userId: number): Promise<UserSubscription | undefined> {
+    const [sub] = await db
+      .select()
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.userId, userId));
+    return sub;
+  }
+
+  async createUserSubscription(data: InsertUserSubscription): Promise<UserSubscription> {
+    const [sub] = await db.insert(userSubscriptions).values(data).returning();
+    return sub;
+  }
+
+  async updateUserSubscription(id: number, data: Partial<UserSubscription>): Promise<UserSubscription | undefined> {
+    const [sub] = await db
+      .update(userSubscriptions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(userSubscriptions.id, id))
+      .returning();
+    return sub;
+  }
+
+  async createUserPayment(data: InsertUserPayment): Promise<UserPayment> {
+    const [payment] = await db.insert(userPayments).values(data).returning();
+    return payment;
+  }
+
+  async getUserPayments(userId: number): Promise<UserPayment[]> {
+    return db
+      .select()
+      .from(userPayments)
+      .where(eq(userPayments.userId, userId))
+      .orderBy(desc(userPayments.attemptedAt));
+  }
+
+  async getExpiringTrials(limitDate: Date): Promise<UserSubscription[]> {
+    return db
+      .select()
+      .from(userSubscriptions)
+      .where(
+        and(
+          eq(userSubscriptions.status, "trialing"),
+          lte(userSubscriptions.trialEndDate, limitDate),
+        ),
+      );
+  }
+
+  async getDueSubscriptions(today: Date): Promise<UserSubscription[]> {
+    // next_billing_date <= today AND status IN ('active', 'past_due')
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    return db
+      .select()
+      .from(userSubscriptions)
+      .where(
+        and(
+          lte(userSubscriptions.nextBillingDate, endOfToday),
+          sql`${userSubscriptions.status} IN ('active', 'past_due')`,
+        ),
+      );
   }
 }
 
