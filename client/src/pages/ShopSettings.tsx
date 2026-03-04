@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Loader2, User, Key, CreditCard, ArrowLeft, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, User, Key, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -214,24 +214,6 @@ export default function ShopSettings() {
           </CardContent>
         </Card>
 
-        {/* 결제 정보 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" /> 결제 정보
-            </CardTitle>
-            <CardDescription>구독 및 결제 내역을 관리합니다</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">
-              결제 수단 변경 및 결제 내역은 구독 관리 페이지에서 확인하실 수 있습니다.
-            </p>
-            <Button variant="outline" onClick={() => setLocation('/admin/subscription')}>
-              <ExternalLink className="w-4 h-4 mr-2" />
-              구독 관리 바로가기
-            </Button>
-          </CardContent>
-        </Card>
       </main>
 
       {/* 비밀번호 변경 다이얼로그 */}
