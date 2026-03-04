@@ -1284,7 +1284,37 @@ export async function registerRoutes(
   app.get('/api/subscription', requireAuth, async (req, res) => {
     const user = req.user as any;
     const sub = await storage.getUserSubscription(user.id);
-    if (!sub) return res.json({ status: 'none' });
+    if (!sub) {
+      // userSubscriptions 레코드가 없어도 shop 레벨 구독 상태를 fallback으로 확인
+      if (user.shopId) {
+        const shop = await storage.getShop(user.shopId);
+        if (shop?.subscriptionStatus === 'active') {
+          return res.json({
+            status: 'active',
+            nextBillingDate: shop.subscriptionEnd ?? null,
+            lastBillingAt: shop.subscriptionStart ?? null,
+            planPrice: PLAN_PRICE,
+            failCount: 0,
+            daysUntilTrialEnd: null,
+            showPaymentNudge: false,
+            isLocked: false,
+          });
+        }
+        if (shop?.subscriptionStatus === 'trialing') {
+          return res.json({
+            status: 'trialing',
+            trialEndDate: shop.subscriptionEnd ?? null,
+            nextBillingDate: null,
+            planPrice: PLAN_PRICE,
+            failCount: 0,
+            daysUntilTrialEnd: null,
+            showPaymentNudge: false,
+            isLocked: false,
+          });
+        }
+      }
+      return res.json({ status: 'none' });
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
