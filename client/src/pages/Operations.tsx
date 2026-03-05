@@ -67,9 +67,9 @@ const NOTIFICATION_TYPES = [
   },
   {
     key: 'depositReceived' as const,
-    label: '예약금 입금 알림',
-    description: '예약금 입금 확인 시 고객에게 알림을 발송합니다',
-    defaultTemplate: '[{매장명}] 예약금 {예약금액}원 입금이 확인되었습니다.\n예약이 최종 확정되었습니다 ✅',
+    label: '예약금 입금 요청 알림',
+    description: '고객에게 예약금 입금을 요청하는 알림입니다. 입금 확인 후 예약 확정 알림은 별도로 발송됩니다.',
+    defaultTemplate: '[{매장명}] 예약을 위해 예약금 {예약금액}원 입금이 필요합니다.\n\n입금 계좌는 예약 상세에서 확인해주세요.\n입금 확인 후 예약이 확정됩니다.',
   },
   {
     key: 'returnVisit' as const,
