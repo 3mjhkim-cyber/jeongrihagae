@@ -1,3 +1,4 @@
+import { SolapiMessageService } from "solapi";
 import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
@@ -31,6 +32,18 @@ export type KakaoTemplateType =
 /** 활성화 여부 저장 JSON 구조 */
 type NotifEnabled = Partial<Record<KakaoTemplateType, boolean>>;
 
+/**
+ * 솔라피에서 발급받은 카카오 알림톡 템플릿 코드 매핑
+ * 심사 통과 후 .env에 각 코드를 입력하세요.
+ */
+const KAKAO_TEMPLATE_CODES: Record<KakaoTemplateType, string> = {
+  bookingConfirmed:  process.env.KAKAO_TEMPLATE_CODE_BOOKING_CONFIRMED  || '',
+  depositGuide:      process.env.KAKAO_TEMPLATE_CODE_DEPOSIT_GUIDE       || '',
+  reminderBefore:    process.env.KAKAO_TEMPLATE_CODE_REMINDER_BEFORE     || '',
+  bookingCancelled:  process.env.KAKAO_TEMPLATE_CODE_BOOKING_CANCELLED   || '',
+  returnVisit:       process.env.KAKAO_TEMPLATE_CODE_RETURN_VISIT        || '',
+};
+
 /** 고정 템플릿 정의 – 카카오 알림톡 심사 양식과 동일하게 유지 */
 const KAKAO_TEMPLATES: Record<KakaoTemplateType, string> = {
   bookingConfirmed: `[#{매장명}]
@@ -62,7 +75,7 @@ const KAKAO_TEMPLATES: Record<KakaoTemplateType, string> = {
   returnVisit: `[#{매장명}]
 #{고객명}님, 오랜만이에요!
 #{반려동물이름}의 미용 예약 어떠세요?
-문의: #{매장전화번호}`,
+예약하기: #{예약링크}`,
 };
 
 /**
@@ -104,7 +117,8 @@ function parseNotifEnabled(shop: Shop): NotifEnabled {
 function buildKakaoMessage(
   templateType: KakaoTemplateType,
   booking: { customerName: string; petName?: string | null; date: string; time: string },
-  shop: { name: string; phone: string; depositAmount?: number | null; bankAccount?: string | null; notificationExtraNote?: string | null },
+  shop: { name: string; phone: string; slug?: string | null; depositAmount?: number | null; bankAccount?: string | null; notificationExtraNote?: string | null },
+  bookingLink?: string,
 ): string {
   let message = KAKAO_TEMPLATES[templateType];
 
@@ -116,6 +130,7 @@ function buildKakaoMessage(
     '#{예약금}':       shop.depositAmount != null ? shop.depositAmount.toLocaleString() : '-',
     '#{계좌번호}':     shop.bankAccount || '(계좌번호 미설정)',
     '#{매장전화번호}': shop.phone,
+    '#{예약링크}':     bookingLink || '',
   };
 
   for (const [key, value] of Object.entries(values)) {
@@ -144,28 +159,37 @@ async function sendKakaoAlimtalk(
   message: string,
   templateType: KakaoTemplateType,
 ): Promise<{ success: boolean; providerMessageId?: string; errorMessage?: string }> {
-  // 수신번호 마스킹 (로그 보안)
   const masked = phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
   console.log(`[알림톡 발송] type=${templateType} to=${masked}`);
   console.log(`[알림톡 내용]\n${message}\n`);
 
-  // ──────────────────────────────────────────────────
-  // TODO: 실제 API 호출 예시 (Solapi 기준)
-  // const solapi = require('solapi');
-  // const result = await solapi.sendKakaoAlimtalk({
-  //   to: phone,
-  //   from: process.env.SOLAPI_SENDER_PHONE,
-  //   kakaoOptions: {
-  //     pfId: process.env.KAKAO_PFID,
-  //     templateId: KAKAO_TEMPLATE_CODES[templateType],
-  //     variables: { ... },
-  //   },
-  // });
-  // return { success: true, providerMessageId: result.messageId };
-  // ──────────────────────────────────────────────────
+  const apiKey    = process.env.SOLAPI_API_KEY;
+  const apiSecret = process.env.SOLAPI_API_SECRET;
+  const pfId      = process.env.KAKAO_PFID;
+  const from      = process.env.SOLAPI_SENDER_PHONE;
 
-  // 현재는 stub — 항상 성공 처리
-  return { success: true, providerMessageId: `stub_${Date.now()}` };
+  if (!apiKey || !apiSecret || !pfId || !from) {
+    console.warn('[알림톡] 솔라피 환경변수 미설정 — 발송 건너뜀');
+    return { success: false, errorMessage: '솔라피 환경변수 미설정' };
+  }
+
+  try {
+    const solapi = new SolapiMessageService(apiKey, apiSecret);
+    const result = await solapi.sendOne({
+      to: phone,
+      from,
+      type: 'ATA',
+      text: message,
+      kakaoOptions: {
+        pfId,
+        templateId: KAKAO_TEMPLATE_CODES[templateType],
+      },
+    });
+    return { success: true, providerMessageId: result.messageId };
+  } catch (err: any) {
+    console.error('[알림톡 발송 실패]', err?.message);
+    return { success: false, errorMessage: err?.message };
+  }
 }
 
 /**
@@ -616,17 +640,23 @@ export async function registerRoutes(
         return res.status(400).json({ message: "이미 사용중인 이메일입니다." });
       }
 
-      const generateSlug = (shopName: string) => {
-        const base = shopName.toLowerCase()
-          .replace(/[^a-z0-9가-힣]/g, '-')
+      const generateUniqueSlug = async (shopName: string) => {
+        const base = shopName
+          .replace(/[^\w가-힣]/g, '-')
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '') || 'shop';
-        return `${base}-${Date.now()}`;
+        let candidate = base;
+        let counter = 2;
+        while (await storage.getShopBySlug(candidate)) {
+          candidate = `${base}-${counter}`;
+          counter++;
+        }
+        return candidate;
       };
 
       const shopInput = {
         name,
-        slug: generateSlug(name),
+        slug: await generateUniqueSlug(name),
         phone,
         address,
         businessHours: shopData.businessHours || '09:00-18:00',
@@ -931,10 +961,13 @@ export async function registerRoutes(
     }
 
     // 재방문 템플릿은 예약일시 없음
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const bookingLink = `${baseUrl}/book/${shop.slug}`;
     const message = buildKakaoMessage(
       'returnVisit',
       { customerName: customer.name, petName: customer.petName, date: '', time: '' },
       shop as any,
+      bookingLink,
     );
 
     await sendAndLog({ templateType: 'returnVisit', phone: customer.phone, message, shopId: shop.id });
