@@ -88,10 +88,46 @@ function formatDateTime(date: string, time: string): string {
 /** shop.notificationEnabled JSON 파싱 */
 function parseNotifEnabled(shop: Shop): NotifEnabled {
   try {
-    const raw = (shop as any).notificationEnabled;
-    if (!raw) return {};
-    return typeof raw === 'string' ? JSON.parse(raw) : raw;
-  } catch {
+    let raw = (shop as any).notificationEnabled;
+    if (!raw) {
+      return {};
+    }
+    
+    // 이미 객체면 그대로 반환
+    if (typeof raw === 'object') {
+      return raw;
+    }
+    
+    // 문자열이면 JSON 파싱
+    if (typeof raw === 'string') {
+      // 이중 따옴표("") 문제 해결: "{""key"":value}" → "{"key":value}"
+      let jsonStr = raw;
+      
+      // 방법 1: 첫 번째와 마지막 따옴표 제거
+      if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+        jsonStr = jsonStr.slice(1, -1);
+      }
+      
+      // 방법 2: 이스케이프된 따옴표를 일반 따옴표로 변환
+      jsonStr = jsonStr.replace(/\\"/g, '"');
+      
+      // 방법 3: 빈 JSON 객체는 그냥 반환
+      if (jsonStr === '{}' || jsonStr === '') {
+        return {};
+      }
+      
+      console.log(`[parseNotifEnabled] 파싱: ${jsonStr.substring(0, 50)}`);
+      const parsed = JSON.parse(jsonStr);
+      console.log(`[parseNotifEnabled] 완료: ${Object.keys(parsed).join(', ')}`);
+      return parsed;
+    }
+    
+    return {};
+  } catch (err: any) {
+    console.error('[parseNotifEnabled] 파싱 실패:', {
+      raw: JSON.stringify(raw),
+      error: err.message,
+    });
     return {};
   }
 }
