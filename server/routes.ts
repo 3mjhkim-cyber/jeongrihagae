@@ -153,21 +153,37 @@ async function sendKakaoAlimtalk(
   templateType: KakaoTemplateType,
 ): Promise<{ success: boolean; providerMessageId?: string; errorMessage?: string }> {
   const masked = phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
-  console.log(`[알림톡 발송] type=${templateType} to=${masked}`);
+  console.log(`\n[알림톡 발송 시작] type=${templateType} to=${masked}`);
   console.log(`[알림톡 내용]\n${message}\n`);
 
   const apiKey    = process.env.SOLAPI_API_KEY;
   const apiSecret = process.env.SOLAPI_API_SECRET;
   const pfId      = process.env.KAKAO_PFID;
   const from      = process.env.SOLAPI_SENDER_PHONE;
+  const templateId = KAKAO_TEMPLATE_CODES[templateType];
+
+  console.log(`[환경변수 확인]`);
+  console.log(`  - SOLAPI_API_KEY: ${apiKey ? '✓' : '✗'}`);
+  console.log(`  - SOLAPI_API_SECRET: ${apiSecret ? '✓' : '✗'}`);
+  console.log(`  - KAKAO_PFID: ${pfId ? '✓' : '✗'}`);
+  console.log(`  - SOLAPI_SENDER_PHONE: ${from ? '✓' : '✗'}`);
+  console.log(`  - KAKAO_TEMPLATE_CODE_${templateType.toUpperCase()}: ${templateId ? '✓' : '✗'}`);
 
   if (!apiKey || !apiSecret || !pfId || !from) {
     console.warn('[알림톡] 솔라피 환경변수 미설정 — 발송 건너뜀');
     return { success: false, errorMessage: '솔라피 환경변수 미설정' };
   }
 
+  if (!templateId) {
+    console.warn(`[알림톡] 템플릿 코드 미설정 (type=${templateType}) — 발송 건너뜀`);
+    return { success: false, errorMessage: `템플릿 코드 미설정: ${templateType}` };
+  }
+
   try {
+    console.log('[Solapi 인스턴스 생성 중...]');
     const solapi = new SolapiMessageService(apiKey, apiSecret);
+    
+    console.log('[Solapi 메시지 발송 중...]');
     const result = await solapi.sendOne({
       to: phone,
       from,
@@ -175,12 +191,18 @@ async function sendKakaoAlimtalk(
       text: message,
       kakaoOptions: {
         pfId,
-        templateId: KAKAO_TEMPLATE_CODES[templateType],
+        templateId,
       },
     });
+    
+    console.log(`[알림톡 발송 성공] messageId=${result.messageId}`);
     return { success: true, providerMessageId: result.messageId };
   } catch (err: any) {
-    console.error('[알림톡 발송 실패]', err?.message);
+    console.error('[알림톡 발송 실패]', {
+      message: err?.message,
+      stack: err?.stack,
+      fullError: JSON.stringify(err, null, 2),
+    });
     return { success: false, errorMessage: err?.message };
   }
 }
@@ -197,7 +219,12 @@ async function sendAndLog(opts: {
 }): Promise<void> {
   const { templateType, phone, message, shopId, reservationId } = opts;
 
+  console.log(`\n[sendAndLog 호출] templateType=${templateType}, shopId=${shopId}, reservationId=${reservationId}`);
+  const masked = phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
+  console.log(`[고객연락처] ${masked}`);
+
   const result = await sendKakaoAlimtalk(phone, message, templateType);
+  console.log(`[발송결과] success=${result.success}, messageId=${result.providerMessageId}, error=${result.errorMessage}`);
 
   try {
     const db = (await import('./db')).db;
@@ -211,6 +238,7 @@ async function sendAndLog(opts: {
       providerMessageId: result.providerMessageId ?? null,
       errorMessage: result.errorMessage ?? null,
     });
+    console.log(`[알림로그 저장] 완료`);
   } catch (logErr) {
     console.error('[알림 로그 저장 실패]', logErr);
   }
