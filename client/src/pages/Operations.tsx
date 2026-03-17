@@ -31,7 +31,7 @@ type BusinessDays = {
   fri: DaySchedule; sat: DaySchedule; sun: DaySchedule;
 };
 // 카카오 알림톡 고정 템플릿 – 활성화 여부만 관리
-type KakaoTemplateKey = 'bookingConfirmed' | 'depositGuide' | 'reminderBefore' | 'bookingCancelled' | 'returnVisit';
+type KakaoTemplateKey = 'bookingConfirmed' | 'depositGuide' | 'reminderBefore' | 'bookingCancelled';
 type NotifEnabled = Partial<Record<KakaoTemplateKey, boolean>>;
 
 // --- Constants ---
@@ -74,12 +74,6 @@ const KAKAO_TEMPLATE_TYPES: { key: KakaoTemplateKey; label: string; description:
     label: '예약 취소',
     description: '예약이 취소될 때 고객에게 발송합니다.',
     template: `[#{매장명}]\n#{고객명}님의 예약이 취소되었습니다.\n예약일시: #{예약일시}\n반려동물: #{반려동물이름}\n문의: #{매장전화번호}`,
-  },
-  {
-    key: 'returnVisit',
-    label: '재방문 안내',
-    description: '마지막 방문 후 일정 기간이 지난 고객에게 발송합니다.',
-    template: `[#{매장명}]\n#{고객명}님, 오랜만이에요!\n#{반려동물이름}의 미용 예약 어떠세요?\n문의: #{매장전화번호}`,
   },
 ];
 
