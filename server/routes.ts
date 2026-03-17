@@ -1289,6 +1289,16 @@ export async function registerRoutes(
     res.json(booking);
   });
 
+  // 예약 메모 수정
+  app.patch('/api/bookings/:id/memo', requireAuth, async (req, res) => {
+    const { memo } = req.body;
+    const booking = await storage.updateBookingMemo(Number(req.params.id), memo ?? '');
+    if (!booking) {
+      return res.status(404).json({ message: "예약을 찾을 수 없습니다." });
+    }
+    res.json(booking);
+  });
+
   // 예약 가능 시간 조회 (서비스 소요시간 고려)
   app.get('/api/shops/:slug/available-times/:date', async (req, res) => {
     const shop = await storage.getShopBySlug(req.params.slug);

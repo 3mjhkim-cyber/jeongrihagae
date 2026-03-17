@@ -528,6 +528,14 @@ export class DatabaseStorage implements IStorage {
     return booking;
   }
 
+  async updateBookingMemo(id: number, memo: string): Promise<Booking | undefined> {
+    const [booking] = await db.update(bookings)
+      .set({ memo })
+      .where(eq(bookings.id, id))
+      .returning();
+    return booking;
+  }
+
   async updateBookingStatus(id: number, status: string): Promise<Booking | undefined> {
     // 먼저 현재 예약 상태 확인
     const [currentBooking] = await db.select().from(bookings).where(eq(bookings.id, id));

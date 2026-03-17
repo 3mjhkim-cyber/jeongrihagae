@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useBookings, useServices, useApproveBooking, useRejectBooking, useRequestDeposit, useAdminCreateBooking, useSearchCustomers, useCustomerHistory, useCancelBooking, useUpdateBooking, useUpdateBookingCustomer, useAdminConfirmDeposit, useUpdateCustomer } from "@/hooks/use-shop";
+import { useBookings, useServices, useApproveBooking, useRejectBooking, useRequestDeposit, useAdminCreateBooking, useSearchCustomers, useCustomerHistory, useCancelBooking, useUpdateBooking, useUpdateBookingCustomer, useAdminConfirmDeposit, useUpdateCustomer, useUpdateBookingMemo } from "@/hooks/use-shop";
 import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
 import { useLocation } from "wouter";
 import { Loader2, Calendar, Clock, User, Phone, Scissors, Check, X, Banknote, Plus, Link, Copy, History, Edit, XCircle, UserCog, PawPrint, FileText, Bell, MessageCircle, ChevronLeft, ChevronRight, LayoutDashboard, DollarSign } from "lucide-react";
@@ -63,6 +63,7 @@ export default function Dashboard() {
 
   // 대시보드 일정 상세 모달 상태
   const [dashboardDetailBooking, setDashboardDetailBooking] = useState<(Booking & { serviceName: string }) | null>(null);
+  const [dashboardMemoText, setDashboardMemoText] = useState("");
 
   // 확정 예약 날짜 필터 상태
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -70,6 +71,8 @@ export default function Dashboard() {
 
   const { data: searchResults } = useSearchCustomers(searchQuery);
   const { data: customerHistoryData } = useCustomerHistory(selectedCustomerPhone);
+
+  const { mutate: updateBookingMemo, isPending: isSavingMemo } = useUpdateBookingMemo();
 
   // 리마인드 전송 mutation
   const { mutate: sendRemind, isPending: isSendingRemind } = useMutation({
@@ -473,7 +476,7 @@ export default function Dashboard() {
                       return (
                         <button
                           key={booking.id}
-                          onClick={() => setDashboardDetailBooking(booking)}
+                          onClick={() => { setDashboardDetailBooking(booking); setDashboardMemoText(booking.memo ?? ""); }}
                           className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left cursor-pointer ${
                             past ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-border hover:border-primary/30 hover:shadow-sm'
                           }`}
@@ -1271,14 +1274,29 @@ export default function Dashboard() {
                     </span>
                   </div>
                 )}
-                {dashboardDetailBooking.memo && (
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground">{dashboardDetailBooking.memo}</span>
-                    </div>
-                  </div>
-                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  사장님 메모
+                </label>
+                <Textarea
+                  placeholder="미용 후 메모를 남겨보세요 (특이사항, 다음 방문 안내 등)"
+                  value={dashboardMemoText}
+                  onChange={(e) => setDashboardMemoText(e.target.value)}
+                  className="text-sm min-h-[80px] resize-none"
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={isSavingMemo}
+                  onClick={() => updateBookingMemo(
+                    { id: dashboardDetailBooking.id, memo: dashboardMemoText },
+                    { onSuccess: () => setDashboardDetailBooking(prev => prev ? { ...prev, memo: dashboardMemoText } : null) }
+                  )}
+                >
+                  {isSavingMemo ? "저장 중..." : "메모 저장"}
+                </Button>
               </div>
             </div>
           )}
