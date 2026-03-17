@@ -1,53 +1,49 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useCustomersWithRevenue } from "@/hooks/use-shop";
+import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
 import { useLocation } from "wouter";
 import {
-  Loader2, Users, Search, Award, AlertCircle, RefreshCw,
-  ChevronRight, PawPrint, Calendar, MessageCircle,
+  Loader2, Users, Search, Award, AlertCircle,
+  ChevronRight, PawPrint, Calendar,
 } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CustomerDetailSheet from "@/components/CustomerDetailSheet";
-import { useToast } from "@/hooks/use-toast";
 import type { Customer } from "@shared/schema";
 
 type CustomerWithRevenue = Customer & { totalRevenue: number };
 type EnrichedCustomer = CustomerWithRevenue & {
   isVip: boolean;
   isAtRisk: boolean;
-  isReturnSoon: boolean;
   daysSinceVisit: number | null;
   avgCycleDays: number | null;
 };
 
 export default function Customers() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
   const { data: rawCustomers, isLoading: isCustomersLoading } = useCustomersWithRevenue();
   const [_, setLocation] = useLocation();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<EnrichedCustomer | null>(null);
-  // phone → currently sending
-  const [notifyingPhones, setNotifyingPhones] = useState<Set<string>>(new Set());
 
   const needsSubscription = useMemo(() => {
-    if (user?.role === 'shop_owner' && user.shop) {
+    if (user?.role === 'shop_owner' && !isSubLoading) {
       const shop = user.shop as any;
-      const accessible = shop.subscriptionStatus === 'active' ||
-        (shop.subscriptionStatus === 'cancelled' && shop.subscriptionEnd && new Date(shop.subscriptionEnd) > new Date());
-      return !accessible;
+      const shopAccessible = shop?.subscriptionStatus === 'active' ||
+        (shop?.subscriptionStatus === 'cancelled' && shop?.subscriptionEnd && new Date(shop.subscriptionEnd) > new Date());
+      return !shopAccessible && !userAccessible;
     }
     return false;
-  }, [user]);
+  }, [user, userAccessible, isSubLoading]);
 
   useEffect(() => {
     if (!isAuthLoading && !user) setLocation("/login");
-    if (!isAuthLoading && needsSubscription) setLocation("/admin/subscription");
-  }, [isAuthLoading, user, needsSubscription, setLocation]);
+    if (!isAuthLoading && !isSubLoading && needsSubscription) setLocation("/admin/subscription");
+  }, [isAuthLoading, user, needsSubscription, isSubLoading, setLocation]);
 
   // VIP 임계값: 누적 매출 상위 20%
   const vipThreshold = useMemo(() => {
@@ -76,19 +72,10 @@ export default function Customers() {
         avgCycleDays = totalDays / (c.visitCount - 1);
       }
 
-      // 재방문예정: 다음 예상 방문일까지 3일 이내
-      let isReturnSoon = false;
-      if (avgCycleDays && avgCycleDays > 0 && c.lastVisit) {
-        const nextExpectedMs = new Date(c.lastVisit).getTime() + avgCycleDays * 86400000;
-        const daysUntilNext = differenceInDays(new Date(nextExpectedMs), now);
-        isReturnSoon = daysUntilNext >= 0 && daysUntilNext <= 3;
-      }
-
       return {
         ...c,
         isVip: vipThreshold > 0 && c.totalRevenue >= vipThreshold,
         isAtRisk: daysSinceVisit !== null && daysSinceVisit >= 45,
-        isReturnSoon,
         daysSinceVisit,
         avgCycleDays,
       };
@@ -110,37 +97,13 @@ export default function Customers() {
   const allCustomers = searchFiltered.sort((a, b) => (b.lastVisit ? new Date(b.lastVisit).getTime() : 0) - (a.lastVisit ? new Date(a.lastVisit).getTime() : 0));
   const vipCustomers = searchFiltered.filter(c => c.isVip);
   const atRiskCustomers = searchFiltered.filter(c => c.isAtRisk);
-  const returnSoonCustomers = searchFiltered.filter(c => c.isReturnSoon);
 
   // 대시보드 통계
   const stats = useMemo(() => ({
     total: enrichedCustomers.length,
     vip: enrichedCustomers.filter(c => c.isVip).length,
     atRisk: enrichedCustomers.filter(c => c.isAtRisk).length,
-    returnSoon: enrichedCustomers.filter(c => c.isReturnSoon).length,
   }), [enrichedCustomers]);
-
-  // 재방문 알림 전송 핸들러
-  const handleReturnVisitNotify = async (phone: string, customerName: string) => {
-    if (notifyingPhones.has(phone)) return;
-    setNotifyingPhones(prev => new Set([...prev, phone]));
-    try {
-      const res = await fetch(`/api/customers/${encodeURIComponent(phone)}/return-visit-notify`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast({ title: '전송 완료', description: `${customerName}님께 재방문 알림을 전송했습니다.` });
-      } else {
-        toast({ title: '전송 실패', description: data.message, variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: '오류', description: '알림 전송 중 오류가 발생했습니다.', variant: 'destructive' });
-    } finally {
-      setNotifyingPhones(prev => { const n = new Set(prev); n.delete(phone); return n; });
-    }
-  };
 
   if (isAuthLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!user || needsSubscription) return null;
@@ -156,7 +119,7 @@ export default function Customers() {
           </div>
 
           {/* 대시보드 요약 카드 */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="bg-primary/5 rounded-xl p-2.5 text-center">
               <div className="text-xl font-bold text-primary">{stats.total}</div>
               <div className="text-[10px] text-muted-foreground leading-tight">전체</div>
@@ -168,10 +131,6 @@ export default function Customers() {
             <div className="bg-red-50 rounded-xl p-2.5 text-center">
               <div className="text-xl font-bold text-red-500">{stats.atRisk}</div>
               <div className="text-[10px] text-muted-foreground leading-tight">이탈위험</div>
-            </div>
-            <div className="bg-green-50 rounded-xl p-2.5 text-center">
-              <div className="text-xl font-bold text-green-600">{stats.returnSoon}</div>
-              <div className="text-[10px] text-muted-foreground leading-tight">재방문예정</div>
             </div>
           </div>
 
@@ -196,7 +155,7 @@ export default function Customers() {
           </div>
         ) : (
           <Tabs defaultValue="all">
-            <TabsList className="w-full mb-4 grid grid-cols-4 h-auto">
+            <TabsList className="w-full mb-4 grid grid-cols-3 h-auto">
               <TabsTrigger value="all" className="text-xs py-2 flex flex-col gap-0.5">
                 <span>전체</span>
                 <span className="text-[10px] opacity-60">{stats.total}명</span>
@@ -209,10 +168,6 @@ export default function Customers() {
                 <span>이탈위험</span>
                 <span className="text-[10px] opacity-60">{stats.atRisk}명</span>
               </TabsTrigger>
-              <TabsTrigger value="return-soon" className="text-xs py-2 flex flex-col gap-0.5">
-                <span>재방문예정</span>
-                <span className="text-[10px] opacity-60">{stats.returnSoon}명</span>
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all">
@@ -222,18 +177,12 @@ export default function Customers() {
               <CustomerList customers={vipCustomers} onSelect={setSelectedCustomer} emptyMessage="VIP 고객이 없습니다" emptyDesc={`누적 매출 상위 20% (${vipThreshold.toLocaleString()}원 이상)`} />
             </TabsContent>
             <TabsContent value="at-risk">
-              {/* 이탈위험 탭에서만 알림 버튼 노출 */}
               <CustomerList
                 customers={atRiskCustomers}
                 onSelect={setSelectedCustomer}
                 emptyMessage="이탈 위험 고객이 없습니다"
                 emptyDesc="마지막 방문 후 45일 이상 경과한 고객"
-                onNotify={handleReturnVisitNotify}
-                notifyingPhones={notifyingPhones}
               />
-            </TabsContent>
-            <TabsContent value="return-soon">
-              <CustomerList customers={returnSoonCustomers} onSelect={setSelectedCustomer} emptyMessage="재방문 예정 고객이 없습니다" emptyDesc="평균 방문 주기 기준 3일 이내 방문 예상" />
             </TabsContent>
           </Tabs>
         )}
@@ -255,15 +204,11 @@ function CustomerList({
   onSelect,
   emptyMessage,
   emptyDesc,
-  onNotify,
-  notifyingPhones,
 }: {
   customers: EnrichedCustomer[];
   onSelect: (c: EnrichedCustomer) => void;
   emptyMessage: string;
   emptyDesc?: string;
-  onNotify?: (phone: string, name: string) => void;
-  notifyingPhones?: Set<string>;
 }) {
   if (customers.length === 0) {
     return (
@@ -282,8 +227,6 @@ function CustomerList({
           key={customer.id}
           customer={customer}
           onSelect={onSelect}
-          onNotify={onNotify}
-          isNotifying={notifyingPhones?.has(customer.phone) ?? false}
         />
       ))}
     </div>
@@ -299,19 +242,13 @@ function getDaysSinceStyle(days: number | null): { className: string; icon: stri
   return { className: 'text-muted-foreground', icon: '' };
 }
 
-// 고객 행 컴포넌트
-// onNotify가 전달된 경우(이탈위험 탭) 알림 버튼 노출.
 // 중첩 button을 피하기 위해 외부 컨테이너는 div로 처리.
 function CustomerRow({
   customer,
   onSelect,
-  onNotify,
-  isNotifying,
 }: {
   customer: EnrichedCustomer;
   onSelect: (c: EnrichedCustomer) => void;
-  onNotify?: (phone: string, name: string) => void;
-  isNotifying?: boolean;
 }) {
   const dayStyle = getDaysSinceStyle(customer.daysSinceVisit);
 
@@ -350,11 +287,6 @@ function CustomerRow({
                   <AlertCircle className="w-2.5 h-2.5" /> {customer.daysSinceVisit}일 미방문
                 </span>
               )}
-              {customer.isReturnSoon && (
-                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5">
-                  <RefreshCw className="w-2.5 h-2.5" /> 재방문예정
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
               {customer.petName && (
@@ -389,23 +321,6 @@ function CustomerRow({
         </div>
       </div>
 
-      {/* 재방문 알림 버튼 — 이탈위험 탭에서만 표시 */}
-      {onNotify && (
-        <div className="px-4 pb-3 pt-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-1.5 text-xs h-8 border-dashed"
-            onClick={() => onNotify(customer.phone, customer.name)}
-            disabled={isNotifying}
-          >
-            {isNotifying
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <MessageCircle className="w-3.5 h-3.5" />}
-            재방문 알림 전송
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

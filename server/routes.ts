@@ -26,8 +26,7 @@ export type KakaoTemplateType =
   | 'bookingConfirmed'   // 예약 확정
   | 'depositGuide'       // 예약금 안내
   | 'reminderBefore'     // 방문 전 리마인드
-  | 'bookingCancelled'   // 예약 취소
-  | 'returnVisit';       // 재방문 안내
+  | 'bookingCancelled';  // 예약 취소
 
 /** 활성화 여부 저장 JSON 구조 */
 type NotifEnabled = Partial<Record<KakaoTemplateType, boolean>>;
@@ -41,7 +40,6 @@ const KAKAO_TEMPLATE_CODES: Record<KakaoTemplateType, string> = {
   depositGuide:      process.env.KAKAO_TEMPLATE_CODE_DEPOSIT_GUIDE       || '',
   reminderBefore:    process.env.KAKAO_TEMPLATE_CODE_REMINDER_BEFORE     || '',
   bookingCancelled:  process.env.KAKAO_TEMPLATE_CODE_BOOKING_CANCELLED   || '',
-  returnVisit:       process.env.KAKAO_TEMPLATE_CODE_RETURN_VISIT        || '',
 };
 
 /** 고정 템플릿 정의 – 카카오 알림톡 심사 양식과 동일하게 유지 */
@@ -71,11 +69,6 @@ const KAKAO_TEMPLATES: Record<KakaoTemplateType, string> = {
 예약일시: #{예약일시}
 반려동물: #{반려동물이름}
 문의: #{매장전화번호}`,
-
-  returnVisit: `[#{매장명}]
-#{고객명}님, 오랜만이에요!
-#{반려동물이름}의 미용 예약 어떠세요?
-예약하기: #{예약링크}`,
 };
 
 /**
@@ -292,6 +285,7 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
   // userSubscription 레벨 구독 확인 (빌링 시스템)
   const sub = await storage.getUserSubscription(user.id);
   if (sub?.status === 'active') return next();
+  if (sub?.status === 'trialing' && sub.trialEndDate && new Date(sub.trialEndDate) > new Date()) return next();
 
   return res.status(402).json({
     code: 'SUBSCRIPTION_REQUIRED',
@@ -866,7 +860,6 @@ export async function registerRoutes(
       depositGuide:      { label: '예약금 안내',        preview: buildKakaoMessage('depositGuide',      sampleBooking, shop as any) },
       reminderBefore:    { label: '방문 전 리마인드',   preview: buildKakaoMessage('reminderBefore',    sampleBooking, shop as any) },
       bookingCancelled:  { label: '예약 취소',          preview: buildKakaoMessage('bookingCancelled',  sampleBooking, shop as any) },
-      returnVisit:       { label: '재방문 안내',         preview: buildKakaoMessage('returnVisit',       sampleBooking, shop as any) },
     };
     res.json(templates);
   });
@@ -935,44 +928,6 @@ export async function registerRoutes(
     const query = req.query.q as string || '';
     const customers = await storage.searchCustomers(query, user.shopId);
     res.json(customers);
-  });
-
-  // 재방문 알림 전송
-  app.post('/api/customers/:phone/return-visit-notify', requireAuth, async (req, res) => {
-    const user = req.user as any;
-    const phone = decodeURIComponent(req.params.phone);
-
-    const customer = await storage.getCustomerByPhone(phone, user.shopId);
-    if (!customer) {
-      return res.status(404).json({ message: '고객을 찾을 수 없습니다.' });
-    }
-
-    const shop = user.shopId ? await storage.getShop(user.shopId) : null;
-    if (!shop) {
-      return res.status(400).json({ message: '가게 정보를 찾을 수 없습니다.' });
-    }
-
-    const notifEnabled = parseNotifEnabled(shop);
-
-    if (!notifEnabled.returnVisit) {
-      return res.status(400).json({
-        message: '재방문 알림이 비활성화되어 있습니다. 운영 > 알림 설정에서 활성화해주세요.',
-      });
-    }
-
-    // 재방문 템플릿은 예약일시 없음
-    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    const bookingLink = `${baseUrl}/book/${shop.slug}`;
-    const message = buildKakaoMessage(
-      'returnVisit',
-      { customerName: customer.name, petName: customer.petName, date: '', time: '' },
-      shop as any,
-      bookingLink,
-    );
-
-    await sendAndLog({ templateType: 'returnVisit', phone: customer.phone, message, shopId: shop.id });
-
-    res.json({ success: true, message: '재방문 알림을 전송했습니다.' });
   });
 
   app.get('/api/customers/:phone/history', requireAuth, async (req, res) => {

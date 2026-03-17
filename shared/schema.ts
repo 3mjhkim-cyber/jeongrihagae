@@ -140,7 +140,7 @@ export const notificationLogs = pgTable("notification_logs", {
   id: serial("id").primaryKey(),
   shopId: integer("shop_id").references(() => shops.id).notNull(),
   reservationId: integer("reservation_id").references(() => bookings.id),
-  templateType: text("template_type").notNull(), // bookingConfirmed | depositGuide | reminderBefore | bookingCancelled | returnVisit
+  templateType: text("template_type").notNull(), // bookingConfirmed | depositGuide | reminderBefore | bookingCancelled
   phone: text("phone").notNull(),
   status: text("status").notNull(), // sent | failed
   providerMessageId: text("provider_message_id"),

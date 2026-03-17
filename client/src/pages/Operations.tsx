@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -30,7 +31,7 @@ type BusinessDays = {
   fri: DaySchedule; sat: DaySchedule; sun: DaySchedule;
 };
 // 카카오 알림톡 고정 템플릿 – 활성화 여부만 관리
-type KakaoTemplateKey = 'bookingConfirmed' | 'depositGuide' | 'reminderBefore' | 'bookingCancelled' | 'returnVisit';
+type KakaoTemplateKey = 'bookingConfirmed' | 'depositGuide' | 'reminderBefore' | 'bookingCancelled';
 type NotifEnabled = Partial<Record<KakaoTemplateKey, boolean>>;
 
 // --- Constants ---
@@ -74,12 +75,6 @@ const KAKAO_TEMPLATE_TYPES: { key: KakaoTemplateKey; label: string; description:
     description: '예약이 취소될 때 고객에게 발송합니다.',
     template: `[#{매장명}]\n#{고객명}님의 예약이 취소되었습니다.\n예약일시: #{예약일시}\n반려동물: #{반려동물이름}\n문의: #{매장전화번호}`,
   },
-  {
-    key: 'returnVisit',
-    label: '재방문 안내',
-    description: '마지막 방문 후 일정 기간이 지난 고객에게 발송합니다.',
-    template: `[#{매장명}]\n#{고객명}님, 오랜만이에요!\n#{반려동물이름}의 미용 예약 어떠세요?\n문의: #{매장전화번호}`,
-  },
 ];
 
 // 미리보기용 샘플 치환
@@ -114,6 +109,7 @@ type SectionId = typeof SECTIONS[number]['id'];
 // --- Main Component ---
 export default function Operations() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -203,13 +199,13 @@ export default function Operations() {
   }, [isAuthLoading, user, setLocation]);
 
   useEffect(() => {
-    if (user?.shop) {
+    if (!isSubLoading && user?.role === 'shop_owner') {
       const s = user.shop as any;
-      const accessible = s.subscriptionStatus === 'active' ||
-        (s.subscriptionStatus === 'cancelled' && s.subscriptionEnd && new Date(s.subscriptionEnd) > new Date());
-      if (!accessible) setLocation('/admin/subscription');
+      const shopAccessible = s?.subscriptionStatus === 'active' ||
+        (s?.subscriptionStatus === 'cancelled' && s?.subscriptionEnd && new Date(s.subscriptionEnd) > new Date());
+      if (!shopAccessible && !userAccessible) setLocation('/admin/subscription');
     }
-  }, [user, setLocation]);
+  }, [user, userAccessible, isSubLoading, setLocation]);
 
   // --- Mutations ---
   const updateShopMutation = useMutation({
