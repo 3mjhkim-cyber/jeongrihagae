@@ -1,8 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useBookings } from "@/hooks/use-shop";
+import { useBookings, useUpdateBookingMemo } from "@/hooks/use-shop";
 import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
 import { useLocation } from "wouter";
-import { Loader2, CalendarDays, Clock, User, Scissors, Phone } from "lucide-react";
+import { Loader2, CalendarDays, Clock, User, Scissors, Phone, FileText } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -10,6 +10,8 @@ import listPlugin from "@fullcalendar/list";
 import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 interface BookingEvent {
   id: string;
@@ -20,6 +22,7 @@ interface BookingEvent {
   borderColor: string;
   textColor: string;
   extendedProps: {
+    bookingId: number;
     customerName: string;
     customerPhone: string;
     serviceName: string;
@@ -29,6 +32,7 @@ interface BookingEvent {
     time: string;
     duration: number;
     depositStatus: string;
+    memo: string;
   };
 }
 
@@ -38,6 +42,8 @@ export default function Calendar() {
   const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
   const [_, setLocation] = useLocation();
   const [selectedEvent, setSelectedEvent] = useState<BookingEvent | null>(null);
+  const [calendarMemoText, setCalendarMemoText] = useState("");
+  const { mutate: updateBookingMemo, isPending: isSavingMemo } = useUpdateBookingMemo();
   const [currentView, setCurrentView] = useState("dayGridMonth");
   const [isMobile, setIsMobile] = useState(false);
   const calendarRef = useRef<any>(null);
@@ -92,6 +98,7 @@ export default function Calendar() {
         borderColor: isConfirmed ? '#22c55e' : '#f97316',
         textColor: isConfirmed ? '#166534' : '#9a3412',
         extendedProps: {
+          bookingId: booking.id,
           customerName: booking.customerName,
           customerPhone: booking.customerPhone,
           serviceName: booking.serviceName,
@@ -101,12 +108,15 @@ export default function Calendar() {
           time: booking.time,
           duration,
           depositStatus: (booking as any).depositStatus || 'none',
+          memo: booking.memo || '',
         },
       };
     }) || [];
 
   const handleEventClick = (info: any) => {
-    setSelectedEvent(info.event as unknown as BookingEvent);
+    const event = info.event as unknown as BookingEvent;
+    setSelectedEvent(event);
+    setCalendarMemoText(event.extendedProps.memo || "");
   };
 
   // 이벤트 렌더링
@@ -316,6 +326,29 @@ export default function Calendar() {
                     )}
                   </div>
                 )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  사장님 메모
+                </label>
+                <Textarea
+                  placeholder="미용 후 메모를 남겨보세요 (특이사항, 다음 방문 안내 등)"
+                  value={calendarMemoText}
+                  onChange={(e) => setCalendarMemoText(e.target.value)}
+                  className="text-sm min-h-[80px] resize-none"
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={isSavingMemo}
+                  onClick={() => updateBookingMemo(
+                    { id: selectedEvent.extendedProps.bookingId, memo: calendarMemoText },
+                    { onSuccess: () => setSelectedEvent(prev => prev ? { ...prev, extendedProps: { ...prev.extendedProps, memo: calendarMemoText } } : null) }
+                  )}
+                >
+                  {isSavingMemo ? "저장 중..." : "메모 저장"}
+                </Button>
               </div>
             </div>
           )}

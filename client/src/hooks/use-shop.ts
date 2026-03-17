@@ -399,6 +399,32 @@ export function useUpdateBookingCustomer() {
   });
 }
 
+// 예약 메모 수정
+export function useUpdateBookingMemo() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, memo }: { id: number; memo: string }) => {
+      const res = await fetch(`/api/bookings/${id}/memo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ memo }),
+      });
+      if (!res.ok) throw new Error("메모 저장에 실패했습니다.");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.bookings.list.path] });
+      toast({ title: "메모 저장됨" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "저장 실패", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
 // 예약 가능 시간 조회
 export function useAvailableTimeSlots(slug: string, date: string, duration: number = 60) {
   return useQuery({
