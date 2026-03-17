@@ -103,6 +103,7 @@ export default function Subscription() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNote, setCancelNote] = useState("");
+  const [receiptPayment, setReceiptPayment] = useState<PaymentRecord | null>(null);
 
   const isPortOneConfigured = !!(
     import.meta.env.VITE_PORTONE_STORE_ID &&
@@ -424,7 +425,10 @@ export default function Subscription() {
                     </span>
                     <span>
                       {p.result === "success" && p.providerTxId ? (
-                        <button className="text-primary text-sm underline underline-offset-2 hover:opacity-70 transition-opacity">
+                        <button
+                          className="text-primary text-sm underline underline-offset-2 hover:opacity-70 transition-opacity"
+                          onClick={() => setReceiptPayment(p)}
+                        >
                           보기
                         </button>
                       ) : (
@@ -548,6 +552,42 @@ export default function Subscription() {
               {cancelMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               구독 취소
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 결제 상세 팝업 */}
+      <Dialog open={!!receiptPayment} onOpenChange={(v) => { if (!v) setReceiptPayment(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>결제 상세</DialogTitle>
+          </DialogHeader>
+          {receiptPayment && (
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">결제일</span>
+                <span className="font-medium">{fmtDate(receiptPayment.paidAt ?? receiptPayment.attemptedAt)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">플랜</span>
+                <span className="font-medium">스탠다드 (월간)</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">결제 금액</span>
+                <span className="font-medium">₩{receiptPayment.amount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">상태</span>
+                <span className="text-green-600 font-medium">결제됨</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">거래 ID</span>
+                <span className="font-mono text-xs break-all text-right max-w-[180px]">{receiptPayment.providerTxId}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="w-full" onClick={() => setReceiptPayment(null)}>닫기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
