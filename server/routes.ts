@@ -585,7 +585,7 @@ export async function registerRoutes(
 
       // 플랜별 금액 검증
       const PLAN_PRICES: Record<string, number> = {
-        basic: 29000,
+        basic: 39000,
         premium: 49000,
         enterprise: 99000,
       };
@@ -643,7 +643,7 @@ export async function registerRoutes(
       }
 
       const PLAN_PRICES: Record<string, number> = {
-        basic: 29000,
+        basic: 39000,
         premium: 49000,
         enterprise: 99000,
       };
@@ -1566,7 +1566,7 @@ export async function registerRoutes(
     res.json(stats);
   });
 
-  // ===== 사용자 구독 빌링 API (단일 플랜 29,000원/월) =====
+  // ===== 사용자 구독 빌링 API (단일 플랜 39,000원/월) =====
 
   /**
    * GET /api/subscription
@@ -1803,7 +1803,7 @@ export async function registerRoutes(
 
     // 가격 설정
     const prices: Record<string, number> = {
-      basic: 29000,
+      basic: 39000,
       premium: 49000,
       enterprise: 99000,
     };
