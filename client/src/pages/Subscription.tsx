@@ -3,7 +3,7 @@
  *
  * 상태별 뷰:
  *   none            → 서비스 소개 + 무료체험 시작 버튼
- *   trialing        → 체험 중 (D-3 이하이면 결제 유도 배너 표시)
+ *   trialing        → 체험 중 (D-7 이하이면 결제 유도 배너 표시)
  *   pending_payment → 체험 만료 / 결제 필요 (잠금)
  *   active          → 구독 관리 (플랜 / 결제수단 / 청구서 / 취소)
  *   past_due        → 결제 실패 (카드 재등록 유도)
@@ -279,7 +279,7 @@ export default function Subscription() {
         {sub?.showPaymentNudge && status === "trialing" && (
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
-            <span>무료체험이 <strong>{sub.daysUntilTrialEnd}일 후</strong> 종료됩니다. 서비스를 계속 이용하려면 카드를 등록해주세요.</span>
+            <span>무료체험 종료까지 <strong>{sub.daysUntilTrialEnd}일</strong> 남았습니다. 서비스를 계속 이용하려면 지금 카드를 등록해주세요.</span>
           </div>
         )}
         {status === "pending_payment" && (

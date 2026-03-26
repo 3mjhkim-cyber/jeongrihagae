@@ -1711,9 +1711,9 @@ export async function registerRoutes(
       planPrice: PLAN_PRICE,
       // 프론트엔드 편의: 체험 남은 일수 (음수면 만료)
       daysUntilTrialEnd,
-      // D-3 경고 표시 조건
+      // D-7 경고 표시 조건
       showPaymentNudge:
-        sub.status === 'trialing' && daysUntilTrialEnd <= 3,
+        sub.status === 'trialing' && daysUntilTrialEnd <= 7,
       isLocked:
         sub.status === 'pending_payment' || sub.status === 'past_due',
     });
