@@ -23,7 +23,7 @@ import { ko } from "date-fns/locale";
 export default function Dashboard() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
-  const { data: bookings, isPending: isBookingsLoading } = useBookings();
+  const { data: bookings } = useBookings();
   const { data: services } = useServices();
   const { mutate: approveBooking } = useApproveBooking();
   const { mutate: rejectBooking } = useRejectBooking();
@@ -395,7 +395,7 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {isBookingsLoading ? (
+        {bookings === undefined ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
