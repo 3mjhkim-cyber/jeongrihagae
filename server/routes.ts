@@ -409,8 +409,8 @@ export async function registerRoutes(
 
   // ── 구독 필요 API 경로에 requireActiveSubscription 적용 ──────────────────────
   // /api/subscription* 은 제외 (구독 페이지 자체 API는 항상 접근 가능해야 함)
+  // POST /api/bookings 는 손님 예약 생성이므로 로그인 없이 가능해야 함 → 제외
   const SUBSCRIPTION_GUARDED = [
-    '/api/bookings',
     '/api/customers',
     '/api/calendar',
     '/api/revenue',
@@ -421,6 +421,11 @@ export async function registerRoutes(
   for (const path of SUBSCRIPTION_GUARDED) {
     app.use(path, requireActiveSubscription);
   }
+  // 예약 관련: 손님 예약 생성(POST)은 제외하고 나머지(GET, PATCH 등)만 구독 체크
+  app.use('/api/bookings', (req: any, res: any, next: any) => {
+    if (req.method === 'POST' && req.path === '/') return next();
+    return requireActiveSubscription(req, res, next);
+  });
 
   passport.use(new LocalStrategy(
     { usernameField: 'email', passwordField: 'password' },
