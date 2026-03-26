@@ -40,12 +40,19 @@ function fmtDate(d: Date | string | null | undefined): string {
   return `${y}-${m}-${day}`;
 }
 
-/** 단순 활성/비활성 배지 */
+/** 활성/무료체험/비활성 배지 */
 function StatusBadge({ status }: { status: string | null }) {
   if (status === "active") {
     return (
       <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 text-xs">
         활성
+      </Badge>
+    );
+  }
+  if (status === "trialing") {
+    return (
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs">
+        무료체험 중
       </Badge>
     );
   }
