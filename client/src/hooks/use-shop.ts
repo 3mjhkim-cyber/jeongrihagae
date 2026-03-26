@@ -14,7 +14,7 @@ export function useServices() {
   });
 }
 
-export function useBookings() {
+export function useBookings(pausePolling: boolean = false) {
   return useQuery({
     queryKey: [api.bookings.list.path],
     queryFn: async () => {
@@ -24,8 +24,8 @@ export function useBookings() {
       return api.bookings.list.responses[200].parse(await res.json());
     },
     retry: false,
-    refetchInterval: 2000,
-    refetchIntervalInBackground: false,
+    refetchInterval: pausePolling ? false : 2000,
+    refetchIntervalInBackground: true,
   });
 }
 

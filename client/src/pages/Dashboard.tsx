@@ -94,6 +94,16 @@ export default function Dashboard() {
   // 다이얼로그가 열려있는지 확인
   const isAnyDialogOpen = isHistoryDialogOpen || isCustomerDetailOpen || !!remindBooking || !!editBooking || !!editCustomerBooking || !!cancelConfirmBooking || isManualDialogOpen || isCalendarOpen;
   
+  // 다이얼로그 열림 상태에 따라 폴링 제어
+  useEffect(() => {
+    if (isAnyDialogOpen) {
+      // 다이얼로그가 열려있으면 폴링 멈추기
+      queryClient.cancelQueries({ queryKey: [api.bookings.list.path] });
+    } else {
+      // 다이얼로그가 닫혔으면 폴링 재개하기
+      queryClient.refetchQueries({ queryKey: [api.bookings.list.path] });
+    }
+  }, [isAnyDialogOpen, queryClient]);
 
   const copyDepositLink = (bookingId: number) => {
     const link = `${window.location.origin}/deposit/${bookingId}`;
