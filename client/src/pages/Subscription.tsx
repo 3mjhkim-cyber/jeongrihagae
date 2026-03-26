@@ -252,7 +252,7 @@ export default function Subscription() {
                 : "무료체험 시작하기 (30일, 카드 불필요)"}
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-3">
-              체험 종료 후 자동 결제되지 않습니다
+              체험 종료 후 자동 결제되지 않습니다 · 계속 이용하려면 카드를 등록해 구독을 시작하세요
             </p>
           </div>
         </div>
