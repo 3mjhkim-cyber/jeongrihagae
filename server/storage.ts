@@ -112,6 +112,12 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async updateUserResetCode(id: number, code: string | null, expires: Date | null): Promise<void> {
+    await db.update(users)
+      .set({ resetCode: code, resetCodeExpires: expires })
+      .where(eq(users.id, id));
+  }
+
   async getShops(): Promise<Shop[]> {
     return await db.select().from(shops).orderBy(desc(shops.createdAt));
   }
