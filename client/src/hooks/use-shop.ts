@@ -24,7 +24,7 @@ export function useBookings() {
       return api.bookings.list.responses[200].parse(await res.json());
     },
     retry: false,
-    refetchInterval: 1000,
+    refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
 }
