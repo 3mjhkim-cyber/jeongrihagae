@@ -23,7 +23,7 @@ import { ko } from "date-fns/locale";
 export default function Dashboard() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
-  const { data: bookings } = useBookings();
+  const { data: bookings, isLoading: isBookingsLoading } = useBookings();
   const { data: services } = useServices();
   const { mutate: approveBooking } = useApproveBooking();
   const { mutate: rejectBooking } = useRejectBooking();
@@ -93,6 +93,14 @@ export default function Dashboard() {
   // 다이얼로그가 열려있는지 확인
   const isAnyDialogOpen = isHistoryDialogOpen || isCustomerDetailOpen || !!remindBooking || !!editBooking || !!editCustomerBooking || !!cancelConfirmBooking || isManualDialogOpen || isCalendarOpen;
 
+  // 실시간 업데이트: 2초마다 예약 데이터 갱신 (다이얼로그가 열려있으면 일시 중지)
+  useEffect(() => {
+    if (isAnyDialogOpen) return;
+    const interval = setInterval(() => {
+      queryClient.refetchQueries({ queryKey: [api.bookings.list.path] });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [queryClient, isAnyDialogOpen]);
 
   const copyDepositLink = (bookingId: number) => {
     const link = `${window.location.origin}/deposit/${bookingId}`;
@@ -395,7 +403,7 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {bookings === undefined ? (
+        {isBookingsLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
