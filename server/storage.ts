@@ -74,6 +74,7 @@ export interface IStorage {
 
   // ─── 사용자 구독 빌링 (신규) ───────────────────────────────────────────────
   getUserSubscription(userId: number): Promise<UserSubscription | undefined>;
+  getUserSubscriptionStatusByUserIds(userIds: number[]): Promise<Record<number, string>>;
   createUserSubscription(data: InsertUserSubscription): Promise<UserSubscription>;
   updateUserSubscription(id: number, data: Partial<UserSubscription>): Promise<UserSubscription | undefined>;
 
@@ -801,6 +802,18 @@ export class DatabaseStorage implements IStorage {
       .from(userSubscriptions)
       .where(eq(userSubscriptions.userId, userId));
     return sub;
+  }
+
+  /** userId 목록으로 구독 상태를 한 번에 조회 — userId → status 맵 반환 */
+  async getUserSubscriptionStatusByUserIds(userIds: number[]): Promise<Record<number, string>> {
+    if (userIds.length === 0) return {};
+    const subs = await db
+      .select({ userId: userSubscriptions.userId, status: userSubscriptions.status })
+      .from(userSubscriptions)
+      .where(inArray(userSubscriptions.userId, userIds));
+    const map: Record<number, string> = {};
+    for (const s of subs) map[s.userId] = s.status;
+    return map;
   }
 
   async createUserSubscription(data: InsertUserSubscription): Promise<UserSubscription> {
