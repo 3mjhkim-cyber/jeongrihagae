@@ -152,6 +152,11 @@ export default function Login() {
                   </Button>
                 </Link>
               </div>
+              <div>
+                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  비밀번호를 잊으셨나요?
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

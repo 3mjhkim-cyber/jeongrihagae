@@ -413,6 +413,91 @@ export async function registerRoutes(
     }
   });
 
+  // ===== 비밀번호 찾기 =====
+
+  // 1단계: 이메일로 SMS 인증번호 발송
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: '이메일을 입력해주세요.' });
+
+    const user = await storage.getUserByUsername(email);
+    // 이메일 존재 여부를 노출하지 않기 위해 항상 성공 응답
+    if (!user || !user.phone) {
+      return res.json({ message: '인증번호를 발송했습니다.' });
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
+
+    await storage.updateUserResetCode(user.id, code, expires);
+
+    const apiKey = process.env.SOLAPI_API_KEY;
+    const apiSecret = process.env.SOLAPI_API_SECRET;
+    const from = process.env.SOLAPI_SENDER_PHONE;
+
+    if (apiKey && apiSecret && from) {
+      try {
+        const solapi = new SolapiMessageService(apiKey, apiSecret);
+        await solapi.sendOne({ to: user.phone, from, text: `[정리하개] 비밀번호 재설정 인증번호: ${code} (10분 내 입력)` });
+      } catch (err: any) {
+        console.error('[비밀번호 찾기 SMS 발송 실패]', err?.message);
+      }
+    } else {
+      console.warn('[비밀번호 찾기] 솔라피 환경변수 미설정 — 인증번호:', code);
+    }
+
+    res.json({ message: '인증번호를 발송했습니다.' });
+  });
+
+  // 2단계: 인증번호 확인
+  app.post('/api/auth/verify-reset-code', async (req, res) => {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ message: '이메일과 인증번호를 입력해주세요.' });
+
+    const user = await storage.getUserByUsername(email);
+    if (!user || !user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({ message: '인증번호가 유효하지 않습니다.' });
+    }
+    if (new Date() > new Date(user.resetCodeExpires)) {
+      return res.status(400).json({ message: '인증번호가 만료되었습니다. 다시 요청해주세요.' });
+    }
+    if (user.resetCode !== code) {
+      return res.status(400).json({ message: '인증번호가 올바르지 않습니다.' });
+    }
+
+    res.json({ message: '인증 성공' });
+  });
+
+  // 3단계: 새 비밀번호 설정
+  app.post('/api/auth/reset-password', async (req, res) => {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: '모든 항목을 입력해주세요.' });
+    }
+
+    const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{10,}$/;
+    if (!PASSWORD_REGEX.test(newPassword)) {
+      return res.status(400).json({ message: '비밀번호는 영문 대/소문자, 숫자, 특수문자를 포함하여 10자 이상이어야 합니다.' });
+    }
+
+    const user = await storage.getUserByUsername(email);
+    if (!user || !user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({ message: '인증번호가 유효하지 않습니다.' });
+    }
+    if (new Date() > new Date(user.resetCodeExpires)) {
+      return res.status(400).json({ message: '인증번호가 만료되었습니다. 다시 요청해주세요.' });
+    }
+    if (user.resetCode !== code) {
+      return res.status(400).json({ message: '인증번호가 올바르지 않습니다.' });
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await storage.updateUserPassword(user.id, hashed);
+    await storage.updateUserResetCode(user.id, null, null); // 사용된 코드 즉시 무효화
+
+    res.json({ message: '비밀번호가 성공적으로 변경되었습니다.' });
+  });
+
   app.post(api.auth.logout.path, (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);

@@ -25,6 +25,7 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Refund from "@/pages/Refund";
 import Support from "@/pages/Support";
+import ForgotPassword from "@/pages/ForgotPassword";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
+          <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/book/:slug" component={Booking} />
           <Route path="/admin/dashboard" component={Dashboard} />
           <Route path="/admin/customers" component={Customers} />

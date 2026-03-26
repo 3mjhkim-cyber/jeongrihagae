@@ -47,6 +47,8 @@ export const users = pgTable("users", {
   phone: text("phone"),
   address: text("address"),
   businessNumber: text("business_number"),
+  resetCode: text("reset_code"),
+  resetCodeExpires: timestamp("reset_code_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
