@@ -868,9 +868,32 @@ export async function registerRoutes(
   // 가맹점 목록 — shops + 소유자 이메일(로그인 아이디) 포함
   app.get('/api/admin/shops', requireSuperAdmin, async (req, res) => {
     const shops = await storage.getShops();
-    // 각 가맹점 소유자의 이메일을 users 테이블에서 가져와 ownerEmail 필드로 첨부
-    const ownerMap = await storage.getOwnerEmailsByShopIds(shops.map(s => s.id));
-    const result = shops.map(s => ({ ...s, ownerEmail: ownerMap[s.id] ?? null }));
+    const shopIds = shops.map(s => s.id);
+
+    // 소유자 이메일 + userId 매핑
+    const ownerMap = await storage.getOwnerEmailsByShopIds(shopIds);
+
+    // 소유자 userId 목록 조회 (userSubscriptions 조회용)
+    const ownerRows = await Promise.all(
+      shopIds.map(id => storage.getUserByShopId(id))
+    );
+    const shopIdToUserId: Record<number, number> = {};
+    for (const u of ownerRows) {
+      if (u?.shopId != null) shopIdToUserId[u.shopId] = u.id;
+    }
+
+    // userSubscriptions 상태 일괄 조회
+    const userIds = Object.values(shopIdToUserId);
+    const subStatusMap = await storage.getUserSubscriptionStatusByUserIds(userIds);
+
+    const result = shops.map(s => {
+      const userId = shopIdToUserId[s.id];
+      const billingStatus = userId != null ? subStatusMap[userId] : undefined;
+      // shop 자체가 active면 그대로, 아니면 새 빌링 시스템 상태(trialing 등) 우선 반영
+      const effectiveStatus =
+        s.subscriptionStatus === 'active' ? 'active' : (billingStatus ?? s.subscriptionStatus);
+      return { ...s, subscriptionStatus: effectiveStatus, ownerEmail: ownerMap[s.id] ?? null };
+    });
     res.json(result);
   });
 
