@@ -2,8 +2,8 @@
  * 일일 구독 스케줄러
  *
  * A. 무료체험 만료 처리
- *    - trial_end_date <= 오늘+3일 이고 status=trialing → pending_payment 전환
- *    - (D-3 경고 및 체험 만료 모두 동일하게 pending_payment 처리)
+ *    - trial_end_date <= 오늘 이고 status=trialing → pending_payment 전환
+ *    - (체험 만료일이 지난 경우에만 pending_payment 처리, D-7 경고는 API 레이어에서 처리)
  *
  * B. 정기 결제 처리
  *    - next_billing_date <= 오늘 AND status IN ('active','past_due')
@@ -46,10 +46,9 @@ export function addOneMonth(date: Date): Date {
 async function processTrialExpirations(): Promise<void> {
   const today = todayMidnight();
 
-  // D-3 기준: 오늘로부터 3일 후까지 만료되는 체험 구독을 pending_payment 로 전환
+  // 오늘 자정~23:59:59까지 만료되는 체험 구독을 pending_payment 로 전환 (실제 만료일 기준)
   const warningLimit = new Date(today);
-  warningLimit.setDate(warningLimit.getDate() + 3);
-  warningLimit.setHours(23, 59, 59, 999); // 3일 후 하루 끝까지 포함
+  warningLimit.setHours(23, 59, 59, 999); // 오늘 하루 끝까지 포함
 
   const expiring = await storage.getExpiringTrials(warningLimit);
   if (expiring.length === 0) return;
