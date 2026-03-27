@@ -304,6 +304,46 @@ export default function Subscription() {
             </p>
           </div>
         </div>
+
+        {/* 데모 카드 등록 다이얼로그 */}
+        <Dialog open={showDemoCardDialog} onOpenChange={setShowDemoCardDialog}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                데모 카드 등록 모드
+              </DialogTitle>
+              <DialogDescription>
+                PG사(포트원) 연동 전입니다. 실제 카드 등록 없이 즉시 구독이 활성화됩니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="bg-secondary/30 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">플랜</span>
+                <span className="font-medium">{PLAN.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">결제 금액</span>
+                <span className="font-bold text-primary">{PLAN.price.toLocaleString()}원</span>
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowDemoCardDialog(false)} disabled={isRegisteringCard}>취소</Button>
+              <Button
+                onClick={async () => {
+                  setShowDemoCardDialog(false);
+                  await attachAndPay("demo_billing_key_" + Date.now());
+                }}
+                disabled={isRegisteringCard}
+              >
+                {isRegisteringCard
+                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />처리 중...</>
+                  : <><CreditCard className="w-4 h-4 mr-2" />구독 시작 (데모)</>
+                }
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
