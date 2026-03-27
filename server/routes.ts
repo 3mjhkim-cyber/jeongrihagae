@@ -2143,11 +2143,13 @@ export async function registerRoutes(
       address: "테스트 주소",
       businessNumber: null,
     });
-    // 무료체험 없이 바로 결제 필요 상태로 설정
+    // 무료체험 없이 바로 결제 필요 상태로 설정 (trialStart/End는 NOT NULL이므로 과거 더미값 사용)
+    const dummyPast = new Date('2000-01-01');
     await storage.createUserSubscription({
       userId: pgUser.id,
       status: 'pending_payment',
-      trialEndDate: null,
+      trialStartDate: dummyPast,
+      trialEndDate: dummyPast,
       nextBillingDate: null,
     });
   }
