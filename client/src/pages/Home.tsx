@@ -356,39 +356,47 @@ export default function Home() {
       </nav>
 
       {/* ── 2. Hero ────────────────────────────────────────────── */}
-      <section className="py-16 md:py-40 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <span className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-blue-50 text-primary text-xs font-semibold border border-blue-200/50 mb-6">
-            펫 미용샵을 위한 올인원 운영 솔루션
-          </span>
-          <h1
-            className="text-5xl md:text-7xl font-semibold text-gray-900 mb-6 leading-tight tracking-tight"
-            style={{ wordBreak: "keep-all" }}
-          >
-            미용샵 운영,<br />
-            <span className="relative">제대로 정리하세요<span className="absolute bottom-0 left-0 right-0 h-1 bg-primary/30"></span></span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed max-w-2xl mx-auto font-normal" style={{ wordBreak: "keep-all" }}>
-            예약부터 고객 관리, 매출 분석까지<br />
-            미용샵에 꼭 필요한 기능만 담았어요
+      <section className="py-20 md:py-48 px-4 text-center bg-white">
+        <div className="max-w-3xl mx-auto">
+          {/* Top tagline */}
+          <p className="text-xs md:text-sm text-blue-500 font-medium mb-8 tracking-wide" style={{ wordBreak: "keep-all" }}>
+            펫미용샵의 여정을 한 곳에서 관리하세요
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/register">
-              <button className="flex items-center gap-2 w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors">
-                지금 시작하기
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </Link>
-            <button
-              className="w-full sm:w-auto px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors"
-              onClick={() =>
-                document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              기능 살펴보기
-            </button>
+
+          {/* Main title with icon */}
+          <div className="mb-8">
+            <div className="inline-flex items-center justify-center gap-3 mb-6">
+              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center">
+                <Scissors className="w-7 h-7 text-white" />
+              </div>
+              <h1 className="text-5xl md:text-7xl font-bold text-primary leading-tight">
+                미용샵 운영,
+              </h1>
+            </div>
+            <p className="text-gray-700 text-2xl md:text-3xl font-normal mb-2" style={{ wordBreak: "keep-all" }}>
+              이제
+            </p>
+            <h2 className="text-4xl md:text-6xl font-bold text-primary leading-tight" style={{ wordBreak: "keep-all" }}>
+              제대로 정리하세요
+            </h2>
           </div>
-          <p className="mt-6 text-sm text-gray-500 font-normal">신용카드 불필요 · 월 39,000원 · 언제든 해지 가능</p>
+
+          {/* Description */}
+          <p className="text-gray-600 text-sm md:text-base max-w-xl mx-auto mb-12 leading-relaxed font-normal" style={{ wordBreak: "keep-all" }}>
+            예약 접수부터 시작하고, 예약금 관리, 고객 관리까지<br />
+            미용샵 운영에 필요한 모든 기능을 하나로
+          </p>
+
+          {/* CTA Button */}
+          <Link href="/register">
+            <button className="flex items-center justify-center gap-2 mx-auto px-8 py-4 bg-primary text-white rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors mb-4">
+              <ArrowRight className="w-5 h-5" />
+              지금 시작하기
+            </button>
+          </Link>
+
+          {/* Footer note */}
+          <p className="text-xs md:text-sm text-gray-400 font-normal">30일 무료체험 · 신용카드 불필요 · 언제든 해지 가능</p>
         </div>
       </section>
 
