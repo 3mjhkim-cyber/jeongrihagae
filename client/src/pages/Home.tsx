@@ -393,10 +393,10 @@ export default function Home() {
             className="text-[1.85rem] sm:text-4xl md:text-[3.25rem] font-bold text-foreground mb-6 md:mb-8"
             style={{ lineHeight: 1.35, wordBreak: "keep-all" }}
           >
-            일은 줄이고
+            미용샵 운영,
             <br />
             <span className="text-primary relative inline-block">
-              매출은 늘리세요
+              이제 제대로 정리하세요
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
