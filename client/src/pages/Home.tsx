@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Scissors,
   ChevronLeft,
@@ -291,6 +292,7 @@ function CalendarMockup() {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function Home() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [noShowCount, setNoShowCount] = useState(4);
   const [avgPrice, setAvgPrice] = useState(60000);
@@ -345,8 +347,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      {/* ── 1. Navigation ──────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-white/80 backdrop-blur-md">
+      {/* ── 1. Navigation (비로그인 시에만 표시) ──────────────── */}
+      {!user && <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 group">
             <div className="bg-primary/20 p-2 rounded-full group-hover:bg-primary/30 transition-colors">
@@ -361,7 +363,7 @@ export default function Home() {
             </button>
           </Link>
         </div>
-      </nav>
+      </nav>}
 
       {/* ── 2. Hero ────────────────────────────────────────────── */}
       <section className="relative pt-16 pb-24 md:pt-24 md:pb-40 px-4 overflow-hidden">
