@@ -179,7 +179,7 @@ export default function Subscription() {
         billingKeyMethod: "CARD",
         issueId: `issue-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         issueName: "펫그루머 서비스 카드 등록",
-        customer: { id: String(user?.id), email: user?.email ?? "", phoneNumber: user?.phone ?? "" },
+        customer: { id: String(user?.id), email: user?.email ?? "", phoneNumber: user?.phone ?? "", fullName: user?.shopName ?? "" },
       });
       if (response?.code) {
         toast({ title: "카드 등록 실패", description: response.message || "카드 등록이 취소되었습니다.", variant: "destructive" });
