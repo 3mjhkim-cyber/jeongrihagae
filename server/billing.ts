@@ -10,7 +10,7 @@
  */
 
 /** 단일 플랜 가격 (KRW) */
-export const PLAN_PRICE = 29_000;
+export const PLAN_PRICE = 39_000;
 
 /** 결제 최대 재시도 횟수 (3일 연속 1일 1회) */
 export const MAX_FAIL_COUNT = 3;
