@@ -261,9 +261,9 @@ export default function Subscription() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 뷰 2: 무료체험 만료 — 구독 시작 유도 (서비스 소개 카드)
+  // 뷰 2: 무료체험 만료 / 해지 — 구독 시작 유도 (서비스 소개 카드)
   // ══════════════════════════════════════════════════════════════════════════════
-  if (status === "pending_payment") {
+  if (status === "pending_payment" || status === "cancelled") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background py-12 px-4">
         <div className="max-w-lg mx-auto">
@@ -271,7 +271,9 @@ export default function Subscription() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-4">
               <Lock className="w-7 h-7 text-red-500" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">무료체험이 종료되었습니다</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              {status === "cancelled" ? "구독이 해지되었습니다" : "무료체험이 종료되었습니다"}
+            </h1>
             <p className="text-muted-foreground text-sm">
               서비스를 계속 이용하려면 구독을 시작해주세요.
             </p>
