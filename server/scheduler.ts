@@ -41,6 +41,22 @@ export function addOneMonth(date: Date): Date {
   return d;
 }
 
+// ─── A-0. shops 테이블 구독 만료 처리 ────────────────────────────────────────
+
+async function processExpiredShopSubscriptions(): Promise<void> {
+  const now = new Date();
+  const expiredShops = await storage.getShops();
+  const toExpire = expiredShops.filter(
+    (s) => s.subscriptionStatus === 'active' && s.subscriptionEnd && new Date(s.subscriptionEnd) < now
+  );
+  for (const shop of toExpire) {
+    await storage.updateShopSubscription(shop.id, { subscriptionStatus: 'expired' });
+  }
+  if (toExpire.length > 0) {
+    console.log(`[scheduler] shop 구독 만료 처리: ${toExpire.length}건`);
+  }
+}
+
 // ─── A. 무료체험 만료 처리 ───────────────────────────────────────────────────
 
 async function processTrialExpirations(): Promise<void> {
@@ -134,6 +150,7 @@ async function processRecurringBillings(): Promise<void> {
 export async function runDailyScheduler(): Promise<void> {
   console.log("[scheduler] 일일 스케줄러 실행 시작");
   try {
+    await processExpiredShopSubscriptions();
     await processTrialExpirations();
     await processRecurringBillings();
     console.log("[scheduler] 일일 스케줄러 실행 완료");
