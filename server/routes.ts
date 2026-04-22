@@ -354,6 +354,13 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
   if (user.shopId) {
     const shop = await storage.getShop(user.shopId);
     const now = new Date();
+    // 관리자가 비활성화한 경우 무조건 차단 (userSubscription 상태보다 우선)
+    if (shop?.subscriptionStatus === 'inactive') {
+      return res.status(402).json({
+        code: 'SUBSCRIPTION_REQUIRED',
+        message: '구독이 만료되었습니다. 구독 관리 페이지에서 결제해주세요.',
+      });
+    }
     if (shop?.subscriptionStatus === 'active') {
       const end = shop.subscriptionEnd ? new Date(shop.subscriptionEnd) : null;
       if (!end || end > now) return next();
@@ -921,15 +928,22 @@ export async function registerRoutes(
 
     // userSubscriptions 상태 일괄 조회
     const userIds = Object.values(shopIdToUserId);
-    const subStatusMap = await storage.getUserSubscriptionStatusByUserIds(userIds);
+    const subMap = await storage.getUserSubscriptionsByUserIds(userIds);
 
     const result = shops.map(s => {
       const userId = shopIdToUserId[s.id];
-      const billingStatus = userId != null ? subStatusMap[userId] : undefined;
+      const sub = userId != null ? subMap[userId] : undefined;
+      const billingStatus = sub?.status;
       // shop 자체가 active면 그대로, 아니면 새 빌링 시스템 상태(trialing 등) 우선 반영
       const effectiveStatus =
         s.subscriptionStatus === 'active' ? 'active' : (billingStatus ?? s.subscriptionStatus);
-      return { ...s, subscriptionStatus: effectiveStatus, ownerEmail: ownerMap[s.id] ?? null };
+      return {
+        ...s,
+        subscriptionStatus: effectiveStatus,
+        ownerEmail: ownerMap[s.id] ?? null,
+        trialStartDate: sub?.trialStartDate ?? null,
+        trialEndDate: sub?.trialEndDate ?? null,
+      };
     });
     res.json(result);
   });

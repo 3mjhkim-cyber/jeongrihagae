@@ -816,6 +816,17 @@ export class DatabaseStorage implements IStorage {
     return map;
   }
 
+  async getUserSubscriptionsByUserIds(userIds: number[]): Promise<Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null }>> {
+    if (userIds.length === 0) return {};
+    const subs = await db
+      .select({ userId: userSubscriptions.userId, status: userSubscriptions.status, trialStartDate: userSubscriptions.trialStartDate, trialEndDate: userSubscriptions.trialEndDate })
+      .from(userSubscriptions)
+      .where(inArray(userSubscriptions.userId, userIds));
+    const map: Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null }> = {};
+    for (const s of subs) map[s.userId] = { status: s.status, trialStartDate: s.trialStartDate, trialEndDate: s.trialEndDate };
+    return map;
+  }
+
   async createUserSubscription(data: InsertUserSubscription): Promise<UserSubscription> {
     const [sub] = await db.insert(userSubscriptions).values(data).returning();
     return sub;
