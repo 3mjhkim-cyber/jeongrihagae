@@ -105,8 +105,8 @@ export default function Customers() {
     atRisk: enrichedCustomers.filter(c => c.isAtRisk).length,
   }), [enrichedCustomers]);
 
-  if (isAuthLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  if (!user || needsSubscription) return null;
+  if (isAuthLoading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (needsSubscription) return null;
 
   return (
     <div className="min-h-screen bg-secondary/10 pb-20">

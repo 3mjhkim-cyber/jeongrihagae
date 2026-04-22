@@ -370,10 +370,10 @@ export default function Operations() {
   };
 
   // --- Loading / auth guard ---
-  if (isAuthLoading || isShopLoading) {
+  if (isAuthLoading || isShopLoading || !user) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
-  if (!user || user.role !== 'shop_owner') return null;
+  if (user.role !== 'shop_owner') return null;
 
   // --- Section renderers ---
   const renderInfoSection = () => (
