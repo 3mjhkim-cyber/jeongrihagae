@@ -1910,6 +1910,13 @@ export async function registerRoutes(
         nextBillingDate: addOneMonth(today),
         failCount: 0,
       }))!;
+      // 관리자가 강제 비활성화했더라도 결제 성공 시 shop 레벨 상태 초기화
+      if (user.shopId) {
+        const shop = await storage.getShop(user.shopId);
+        if (shop?.subscriptionStatus === 'inactive') {
+          await storage.updateShop(user.shopId, { subscriptionStatus: 'none' });
+        }
+      }
       return res.json({ subscription: sub, paymentSuccess: true });
     } else {
       // 첫 결제 실패: 빌링키는 저장된 상태로 두고 에러 반환
