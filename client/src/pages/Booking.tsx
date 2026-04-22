@@ -21,8 +21,8 @@ const bookingFormSchema = z.object({
   petAge: z.string().optional(),
   petWeight: z.string().optional(),
   serviceId: z.number({ required_error: "서비스를 선택해주세요" }),
-  date: z.string({ required_error: "날짜를 선택해주세요" }),
-  time: z.string({ required_error: "시간을 선택해주세요" }),
+  date: z.string({ required_error: "날짜를 선택해주세요" }).min(1, "날짜를 선택해주세요"),
+  time: z.string({ required_error: "시간을 선택해주세요" }).min(1, "시간을 선택해주세요"),
   memo: z.string().max(500, "특이사항은 500자 이내로 입력해주세요").optional(),
 });
 
