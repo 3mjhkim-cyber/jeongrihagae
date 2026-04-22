@@ -980,23 +980,23 @@ export async function registerRoutes(
     };
 
     if (subscriptionStatus !== undefined) {
-      // 'active' 또는 'inactive' 2값만 허용; 그 외(none·expired·cancelled 등)는 inactive 로 정규화
-      const normalizedStatus = subscriptionStatus === 'active' ? 'active' : 'inactive';
-      updates.subscriptionStatus = normalizedStatus;
-
-      if (normalizedStatus === 'active') {
-        // 시작일: 폼에서 받은 값 우선, 없으면 기존 값 유지, 기존 값도 없으면 현재 시각
+      if (subscriptionStatus === 'active') {
+        updates.subscriptionStatus = 'active';
         if (subscriptionStart) {
           updates.subscriptionStart = new Date(subscriptionStart);
         } else if (!currentShop.subscriptionStart) {
           updates.subscriptionStart = new Date();
         }
-        // 만료일: 제공된 경우에만 업데이트
         if (subscriptionEnd !== undefined) {
           updates.subscriptionEnd = subscriptionEnd ? new Date(subscriptionEnd) : null;
         }
+      } else if (subscriptionStatus === 'trialing') {
+        // 무료체험 유지: shop 레벨 상태를 'none'으로 돌려 userSubscriptions가 관리
+        updates.subscriptionStatus = 'none';
+        updates.subscriptionEnd = null;
       } else {
-        // inactive: 만료일 null 처리
+        // inactive: 무료체험 중이어도 강제 차단
+        updates.subscriptionStatus = 'inactive';
         updates.subscriptionEnd = null;
       }
     }
