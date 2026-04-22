@@ -78,14 +78,14 @@ export default function PlatformAdmin() {
     if (!isAuthLoading && (!user || user.role !== "super_admin")) setLocation("/login");
   }, [isAuthLoading, user, setLocation]);
 
-  if (isAuthLoading) {
+  if (isAuthLoading || !user) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
-  if (!user || user.role !== "super_admin") return null;
+  if (user.role !== "super_admin") return null;
 
   // 파생 데이터
   const allShops     = shops ?? [];
