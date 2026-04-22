@@ -354,6 +354,13 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
   if (user.shopId) {
     const shop = await storage.getShop(user.shopId);
     const now = new Date();
+    // 관리자가 비활성화한 경우 무조건 차단 (userSubscription 상태보다 우선)
+    if (shop?.subscriptionStatus === 'inactive') {
+      return res.status(402).json({
+        code: 'SUBSCRIPTION_REQUIRED',
+        message: '구독이 만료되었습니다. 구독 관리 페이지에서 결제해주세요.',
+      });
+    }
     if (shop?.subscriptionStatus === 'active') {
       const end = shop.subscriptionEnd ? new Date(shop.subscriptionEnd) : null;
       if (!end || end > now) return next();
