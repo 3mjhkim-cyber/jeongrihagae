@@ -9,8 +9,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
+import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
 import { chargeBillingKey, PLAN_PRICE } from "./billing";
 import { addOneMonth } from "./scheduler";
@@ -392,6 +391,7 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
   });
 }
 
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -406,7 +406,7 @@ export async function registerRoutes(
     clients.forEach(res => { try { res.write(data); } catch {} });
   }
 
-  const PgSession = connectPgSimple(session);
+  const SessionStore = MemoryStore(session);
 
   app.set("trust proxy", 1);
 
@@ -414,18 +414,11 @@ export async function registerRoutes(
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
     saveUninitialized: false,
-    store: new PgSession({
-      pool,
-      createTableIfMissing: true,
-      tableName: "session",
-      ttl: 7 * 24 * 60 * 60,
-      errorLog: console.error,
-    }),
+    store: new SessionStore({ checkPeriod: 86400000 }),
     cookie: {
       secure: false,
       sameSite: "lax",
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
     }
   }));
 
