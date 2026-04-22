@@ -159,7 +159,7 @@ export default function PlatformAdmin() {
             <div className="flex items-center gap-2 min-w-0">
               <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
               <h2 className="font-bold text-sm sm:text-base whitespace-nowrap">최근 등록 가맹점</h2>
-              <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">(최근 5개)</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">(최근 {recentShops.length}개)</span>
             </div>
             {/* 전체 가맹점 관리 페이지로 이동 */}
             <Button
