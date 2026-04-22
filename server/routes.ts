@@ -935,9 +935,11 @@ export async function registerRoutes(
       const userId = shopIdToUserId[s.id];
       const sub = userId != null ? subMap[userId] : undefined;
       const billingStatus = sub?.status;
-      // shop 자체가 active면 그대로, 아니면 새 빌링 시스템 상태(trialing 등) 우선 반영
+      // 관리자 수동 설정(inactive)이 최우선, active도 그대로, 그 외엔 billing 상태 우선
       const effectiveStatus =
-        s.subscriptionStatus === 'active' ? 'active' : (billingStatus ?? s.subscriptionStatus);
+        s.subscriptionStatus === 'inactive' ? 'inactive' :
+        s.subscriptionStatus === 'active'   ? 'active'   :
+        (billingStatus ?? s.subscriptionStatus);
       return {
         ...s,
         subscriptionStatus: effectiveStatus,
