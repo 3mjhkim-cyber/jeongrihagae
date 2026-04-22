@@ -189,11 +189,10 @@ export default function ShopsAdmin() {
       businessHours:      shop.businessHours,
       depositAmount:      shop.depositAmount,
       depositRequired:    shop.depositRequired,
-      // active: 유료구독 / trialing: 무료체험 유지 / inactive: 강제 비활성
       subscriptionStatus: shop.subscriptionStatus === "active" ? "active"
-        : shop.subscriptionStatus === "trialing" || shop.subscriptionStatus === "none"
-          ? "trialing"
-          : "inactive",
+        : shop.subscriptionStatus === "trialing" ? "trialing"
+        : shop.subscriptionStatus === "inactive"  ? "inactive"
+        : "trialing",
       subscriptionStart:  shop.subscriptionStart
         ? new Date(shop.subscriptionStart).toISOString().split("T")[0] : "",
       subscriptionEnd:    shop.subscriptionEnd
@@ -657,8 +656,12 @@ export default function ShopsAdmin() {
                   onChange={e => setEditForm({ ...editForm, subscriptionStatus: e.target.value })}
                 >
                   <option value="active">활성 (유료 구독)</option>
-                  <option value="trialing">무료체험 유지</option>
-                  <option value="inactive">강제 비활성 (무료체험 포함 차단)</option>
+                  {editingShop?.subscriptionStatus === "trialing" && (
+                    <option value="trialing">무료체험 유지</option>
+                  )}
+                  <option value="inactive">
+                    {editingShop?.subscriptionStatus === "trialing" ? "강제 비활성 (무료체험 차단)" : "비활성"}
+                  </option>
                 </select>
               </div>
               {editForm.subscriptionStatus === "active" && (
