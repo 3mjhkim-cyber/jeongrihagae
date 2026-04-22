@@ -9,8 +9,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { Store } from "express-session";
-import { pool } from "./db";
+import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
 import { chargeBillingKey, PLAN_PRICE } from "./billing";
 import { addOneMonth } from "./scheduler";
@@ -392,57 +391,6 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
   });
 }
 
-// ─── 커스텀 PostgreSQL 세션 스토어 ──────────────────────────────────────────────
-class PgSessionStore extends Store {
-  private ready: Promise<void>;
-
-  constructor() {
-    super();
-    this.ready = pool.query(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        sid VARCHAR PRIMARY KEY,
-        sess JSONB NOT NULL,
-        expire TIMESTAMPTZ NOT NULL
-      )
-    `).then(() =>
-      pool.query(`CREATE INDEX IF NOT EXISTS sessions_expire_idx ON sessions (expire)`)
-    ).then(() => {
-      console.log('[Session] PostgreSQL session table ready');
-    }).catch((err) => {
-      console.error('[Session] Failed to create sessions table:', err);
-    });
-  }
-
-  get(sid: string, callback: (err: any, session?: any) => void) {
-    pool.query('SELECT sess FROM sessions WHERE sid = $1 AND expire > NOW()', [sid])
-      .then(r => callback(null, r.rows[0]?.sess ?? null))
-      .catch(callback);
-  }
-
-  set(sid: string, sess: any, callback?: (err?: any) => void) {
-    const expire = sess.cookie?.expires
-      ? new Date(sess.cookie.expires)
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    pool.query(
-      `INSERT INTO sessions (sid, sess, expire) VALUES ($1, $2, $3)
-       ON CONFLICT (sid) DO UPDATE SET sess = $2, expire = $3`,
-      [sid, sess, expire]
-    ).then(() => callback?.()).catch(callback);
-  }
-
-  destroy(sid: string, callback?: (err?: any) => void) {
-    pool.query('DELETE FROM sessions WHERE sid = $1', [sid])
-      .then(() => callback?.()).catch(callback);
-  }
-
-  touch(sid: string, sess: any, callback?: (err?: any) => void) {
-    const expire = sess.cookie?.expires
-      ? new Date(sess.cookie.expires)
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    pool.query('UPDATE sessions SET expire = $1 WHERE sid = $2', [expire, sid])
-      .then(() => callback?.()).catch(callback);
-  }
-}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -458,18 +406,19 @@ export async function registerRoutes(
     clients.forEach(res => { try { res.write(data); } catch {} });
   }
 
+  const SessionStore = MemoryStore(session);
+
   app.set("trust proxy", 1);
 
   app.use(session({
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
     saveUninitialized: false,
-    store: new PgSessionStore(),
+    store: new SessionStore({ checkPeriod: 86400000 }),
     cookie: {
       secure: false,
       sameSite: "lax",
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
     }
   }));
 
