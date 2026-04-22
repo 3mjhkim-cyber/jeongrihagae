@@ -201,6 +201,29 @@ export default function ShopsAdmin() {
     setDetailShop(null);
   };
 
+  // ── 파생 데이터 (hooks 규칙: 조건부 return 이전에 위치해야 함) ───────────────
+  const allShops      = shops ?? [];
+  const activeShops   = allShops.filter(s => s.subscriptionStatus === "active");
+  const inactiveShops = allShops.filter(s => s.subscriptionStatus !== "active");
+
+  const baseList: ShopWithOwner[] =
+    filter === "active"   ? activeShops   :
+    filter === "inactive" ? inactiveShops : allShops;
+
+  // 검색 필터 — 가맹점명·전화번호·고유아이디(slug) 기준
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return baseList;
+    return baseList.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      (s.phone ?? "").includes(q) ||
+      (s.slug ?? "").toLowerCase().includes(q)
+    );
+  }, [baseList, search]);
+
+  // 탭·검색 변경 시 첫 페이지로 초기화
+  useEffect(() => { setPage(1); }, [filter, search]);
+
   // ── 인증 가드 ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthLoading && (!user || user.role !== "super_admin")) setLocation("/login");
@@ -215,8 +238,6 @@ export default function ShopsAdmin() {
   }
   if (user.role !== "super_admin") return null;
 
-  // ── 파생 데이터 ────────────────────────────────────────────────────────────
-
   // 날짜 검증: active 상태이고 시작/만료일이 모두 입력된 경우에만 검사
   const dateError: string | null =
     editForm.subscriptionStatus === "active" &&
@@ -225,30 +246,6 @@ export default function ShopsAdmin() {
     new Date(editForm.subscriptionEnd) <= new Date(editForm.subscriptionStart)
       ? "구독 만료일은 시작일보다 이후여야 합니다."
       : null;
-
-  const allShops     = shops ?? [];
-  const activeShops  = allShops.filter(s => s.subscriptionStatus === "active");
-  const inactiveShops = allShops.filter(s => s.subscriptionStatus !== "active");
-
-  const baseList: ShopWithOwner[] =
-    filter === "active"   ? activeShops   :
-    filter === "inactive" ? inactiveShops : allShops;
-
-  // 검색 필터 — 가맹점명·전화번호·고유아이디(slug) 기준
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return baseList;
-    return baseList.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.phone.includes(q) ||
-      s.slug.toLowerCase().includes(q)
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allShops, filter, search]);
-
-  // 탭·검색 변경 시 첫 페이지로 초기화
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => { setPage(1); }, [filter, search]);
 
   // 페이지네이션
   const totalPages  = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
