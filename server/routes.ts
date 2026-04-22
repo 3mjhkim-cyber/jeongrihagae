@@ -1740,6 +1740,20 @@ export async function registerRoutes(
    */
   app.get('/api/subscription', requireAuth, async (req, res) => {
     const user = req.user as any;
+
+    // 관리자 강제 비활성화 최우선 확인
+    if (user.shopId) {
+      const shop = await storage.getShop(user.shopId);
+      if (shop?.subscriptionStatus === 'inactive') {
+        return res.json({
+          status: 'inactive',
+          isLocked: false,
+          daysUntilTrialEnd: null,
+          showPaymentNudge: false,
+        });
+      }
+    }
+
     const sub = await storage.getUserSubscription(user.id);
     if (!sub) {
       // userSubscriptions 레코드가 없어도 shop 레벨 구독 상태를 fallback으로 확인
