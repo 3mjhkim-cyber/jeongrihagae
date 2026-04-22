@@ -70,11 +70,7 @@ export default function Calendar() {
     }
   }, [user, userAccessible, isSubLoading, setLocation]);
 
-  if (isAuthLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-
-  if (!user) {
-    return null;
-  }
+  if (isAuthLoading || !user) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   const events: BookingEvent[] = bookings
     ?.filter(booking => booking.status === 'pending' || booking.status === 'confirmed')
