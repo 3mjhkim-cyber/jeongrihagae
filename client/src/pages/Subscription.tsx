@@ -59,7 +59,8 @@ type SubStatus =
   | "pending_payment"
   | "active"
   | "past_due"
-  | "cancelled";
+  | "cancelled"
+  | "inactive";
 
 interface SubData {
   status: SubStatus;
@@ -213,6 +214,26 @@ export default function Subscription() {
     rawStatus === "none" && (shopStatus === "active" || shopStatus === "trialing")
       ? (shopStatus as SubStatus)
       : rawStatus;
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 뷰 0: 관리자 강제 비활성화
+  // ══════════════════════════════════════════════════════════════════════════════
+  if (status === "inactive") {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-background flex items-center justify-center py-12 px-4">
+        <div className="max-w-md mx-auto text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-6">
+            <Lock className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold mb-3">서비스가 비활성화되었습니다</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            관리자에 의해 서비스 이용이 제한되었습니다.<br />
+            자세한 내용은 서비스 운영팀에 문의해주세요.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 뷰 1: 구독 없음 — 무료체험 시작
