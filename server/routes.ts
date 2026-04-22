@@ -10,6 +10,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { insertShopSchema, Shop } from "@shared/schema";
 import { chargeBillingKey, PLAN_PRICE } from "./billing";
 import { addOneMonth } from "./scheduler";
@@ -405,19 +406,23 @@ export async function registerRoutes(
     clients.forEach(res => { try { res.write(data); } catch {} });
   }
 
-  const SessionStore = MemoryStore(session);
-  
+  const PgSession = connectPgSimple(session);
+
   app.set("trust proxy", 1);
-  
+
   app.use(session({
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
     saveUninitialized: false,
-    store: new SessionStore({ checkPeriod: 86400000 }),
-    cookie: { 
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
+    cookie: {
       secure: false,
       sameSite: "lax",
-      httpOnly: true
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30일
     }
   }));
 
