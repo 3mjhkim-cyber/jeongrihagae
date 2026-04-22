@@ -928,15 +928,22 @@ export async function registerRoutes(
 
     // userSubscriptions 상태 일괄 조회
     const userIds = Object.values(shopIdToUserId);
-    const subStatusMap = await storage.getUserSubscriptionStatusByUserIds(userIds);
+    const subMap = await storage.getUserSubscriptionsByUserIds(userIds);
 
     const result = shops.map(s => {
       const userId = shopIdToUserId[s.id];
-      const billingStatus = userId != null ? subStatusMap[userId] : undefined;
+      const sub = userId != null ? subMap[userId] : undefined;
+      const billingStatus = sub?.status;
       // shop 자체가 active면 그대로, 아니면 새 빌링 시스템 상태(trialing 등) 우선 반영
       const effectiveStatus =
         s.subscriptionStatus === 'active' ? 'active' : (billingStatus ?? s.subscriptionStatus);
-      return { ...s, subscriptionStatus: effectiveStatus, ownerEmail: ownerMap[s.id] ?? null };
+      return {
+        ...s,
+        subscriptionStatus: effectiveStatus,
+        ownerEmail: ownerMap[s.id] ?? null,
+        trialStartDate: sub?.trialStartDate ?? null,
+        trialEndDate: sub?.trialEndDate ?? null,
+      };
     });
     res.json(result);
   });
