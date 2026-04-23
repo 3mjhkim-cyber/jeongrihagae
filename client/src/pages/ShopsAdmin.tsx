@@ -656,11 +656,15 @@ export default function ShopsAdmin() {
                   onChange={e => setEditForm({ ...editForm, subscriptionStatus: e.target.value })}
                 >
                   <option value="active">활성 (유료 구독)</option>
-                  {editingShop?.subscriptionStatus === "trialing" && (
-                    <option value="trialing">무료체험 유지</option>
+                  {(editingShop?.subscriptionStatus === "trialing" ||
+                    (editingShop?.trialEndDate && new Date(editingShop.trialEndDate) > new Date())) && (
+                    <option value="trialing">무료체험 유지 (강제 비활성 해제)</option>
                   )}
                   <option value="inactive">
-                    {editingShop?.subscriptionStatus === "trialing" ? "강제 비활성 (무료체험 차단)" : "비활성"}
+                    {(editingShop?.subscriptionStatus === "trialing" ||
+                      (editingShop?.trialEndDate && new Date(editingShop.trialEndDate) > new Date()))
+                      ? "강제 비활성 (무료체험 차단)"
+                      : "비활성"}
                   </option>
                 </select>
               </div>
