@@ -245,23 +245,14 @@ export default function ShopSettings() {
         </Card>
 
         {/* 회원 탈퇴 */}
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="w-5 h-5" /> 회원 탈퇴
-            </CardTitle>
-            <CardDescription>
-              탈퇴 시 가맹점, 예약, 고객 데이터가 모두 삭제되며 복구할 수 없습니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-              onClick={() => setIsWithdrawDialogOpen(true)}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              회원 탈퇴
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center pt-2 pb-4">
+          <button
+            onClick={() => setIsWithdrawDialogOpen(true)}
+            className="text-xs text-muted-foreground/50 hover:text-red-500 transition-colors"
+          >
+            회원 탈퇴
+          </button>
+        </div>
 
       </main>
 
