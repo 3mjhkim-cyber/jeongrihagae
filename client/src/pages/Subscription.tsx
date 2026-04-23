@@ -358,6 +358,83 @@ export default function Subscription() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* 자체 카드 입력 폼 */}
+        <Dialog open={showCardFormDialog} onOpenChange={(open) => {
+          if (!isRegisteringCard) setShowCardFormDialog(open);
+        }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" /> 카드 등록
+              </DialogTitle>
+              <DialogDescription>
+                카드 정보를 입력하세요. 등록 즉시 {PLAN.price.toLocaleString()}원이 결제됩니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid gap-2">
+                <Label>카드번호</Label>
+                <input
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono tracking-widest"
+                  placeholder="0000 0000 0000 0000"
+                  maxLength={19}
+                  value={cardForm.number}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                    setCardForm({ ...cardForm, number: v.replace(/(.{4})/g, "$1 ").trim() });
+                  }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label>유효기간</Label>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                    placeholder="MM / YY"
+                    maxLength={7}
+                    value={cardForm.expiryMonth && cardForm.expiryYear
+                      ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}`
+                      : cardForm.expiryMonth || ""}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setCardForm({ ...cardForm, expiryMonth: digits.slice(0, 2), expiryYear: digits.slice(2) });
+                    }}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>비밀번호 앞 2자리</Label>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    type="password"
+                    placeholder="••"
+                    maxLength={2}
+                    value={cardForm.password}
+                    onChange={e => setCardForm({ ...cardForm, password: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>생년월일 6자리 (개인) / 사업자번호 10자리 (법인)</Label>
+                <input
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                  placeholder="YYMMDD"
+                  maxLength={10}
+                  value={cardForm.birth}
+                  onChange={e => setCardForm({ ...cardForm, birth: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowCardFormDialog(false)}>취소</Button>
+              <Button onClick={handleDirectCardSubmit} disabled={isRegisteringCard}>
+                {isRegisteringCard
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</>
+                  : "등록 및 결제"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
