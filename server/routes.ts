@@ -1856,6 +1856,62 @@ export async function registerRoutes(
    *   - status=active 이고 last_billing_at 이 오늘이면 이미 결제됨 → 현재 상태 반환
    *   - DB 트랜잭션 수준 보호는 unique(userId) 인덱스 + 상태 체크로 처리
    */
+
+  // 자체 카드 폼 → 포트원 REST API로 빌링키 직접 발급 (PG 팝업 없음)
+  app.post('/api/subscription/issue-billing-key-direct', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const { cardNumber, expiryYear, expiryMonth, birth, passwordTwoDigits } = req.body;
+
+    if (!cardNumber || !expiryYear || !expiryMonth || !birth || !passwordTwoDigits) {
+      return res.status(400).json({ message: '카드 정보를 모두 입력해주세요.' });
+    }
+
+    const apiSecret  = process.env.PORTONE_API_SECRET;
+    const storeId    = process.env.PORTONE_STORE_ID;
+    const channelKey = process.env.PORTONE_CHANNEL_KEY;
+
+    // 개발 스텁
+    if (!apiSecret) {
+      return res.json({ billingKey: `demo_billing_key_${Date.now()}` });
+    }
+
+    try {
+      const issueId = `issue-${user.id}-${Date.now()}`;
+      const response = await fetch('https://api.portone.io/billing-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `PortOne ${apiSecret}`,
+        },
+        body: JSON.stringify({
+          storeId,
+          channelKey,
+          method: {
+            card: {
+              cardNumber: cardNumber.replace(/\D/g, ''),
+              expiryYear: expiryYear.slice(-2),
+              expiryMonth,
+              birthOrBusinessRegistrationNumber: birth,
+              passwordTwoDigits,
+            },
+          },
+          issueId,
+          issueName: `스탠다드 플랜 구독 (월 ${PLAN_PRICE.toLocaleString()}원)`,
+          customer: { customerId: String(user.id) },
+        }),
+      });
+
+      const data = await response.json() as any;
+      if (!response.ok) {
+        return res.status(400).json({ message: data.message || '카드 등록에 실패했습니다.' });
+      }
+
+      res.json({ billingKey: data.billingKey });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || '카드 등록 중 오류가 발생했습니다.' });
+    }
+  });
+
   app.post('/api/subscription/attach-card-and-pay', requireAuth, async (req, res) => {
     const user = req.user as any;
     const { billingKey } = req.body as { billingKey?: string };
