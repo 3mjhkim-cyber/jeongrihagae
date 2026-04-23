@@ -179,7 +179,7 @@ export default function Subscription() {
         storeId, channelKey,
         billingKeyMethod: "CARD",
         issueId: `issue-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        issueName: "펫그루머 서비스 카드 등록",
+        issueName: `스탠다드 플랜 구독 (월 ${PLAN.price.toLocaleString()}원)`,
         customer: { id: String(user?.id), email: user?.email ?? "", phoneNumber: user?.phone ?? "", fullName: user?.shopName ?? "" },
       });
       if (response?.code) {
