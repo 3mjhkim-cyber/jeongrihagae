@@ -2205,6 +2205,39 @@ export async function registerRoutes(
     }
   }
 
+  // 회원 탈퇴 (본인 계정 삭제)
+  app.delete('/api/user/account', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const { password } = req.body;
+
+    if (!password) return res.status(400).json({ message: '비밀번호를 입력해주세요.' });
+
+    const currentUser = await storage.getUser(user.id);
+    if (!currentUser) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+
+    const isValid = await comparePasswords(password, currentUser.password);
+    if (!isValid) return res.status(400).json({ message: '비밀번호가 올바르지 않습니다.' });
+
+    // userSubscriptions / userPayments 먼저 삭제 (FK 제약)
+    const { db: dbConn } = await import('./db');
+    const { userSubscriptions: userSubTable, userPayments: userPayTable } = await import('@shared/schema');
+    const { eq: eqOp } = await import('drizzle-orm');
+    await dbConn.delete(userPayTable).where(eqOp(userPayTable.userId, user.id));
+    await dbConn.delete(userSubTable).where(eqOp(userSubTable.userId, user.id));
+
+    if (user.shopId) {
+      await storage.deleteShop(user.shopId);
+    } else {
+      const { users: usersTable } = await import('@shared/schema');
+      await dbConn.delete(usersTable).where(eqOp(usersTable.id, user.id));
+    }
+
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.json({ message: '계정이 삭제되었습니다.' });
+    });
+  });
+
   // PG 테스트 계정 삭제 엔드포인트 (슈퍼어드민 전용)
   app.delete('/api/admin/pg-test-account', requireSuperAdmin, async (req, res) => {
     const shop = await storage.getShopBySlug(PG_TEST_SLUG);

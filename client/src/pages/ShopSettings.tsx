@@ -2,13 +2,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Loader2, User, Key, ArrowLeft, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { Loader2, User, Key, ArrowLeft, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import type { Shop } from "@shared/schema";
@@ -35,6 +36,33 @@ export default function ShopSettings() {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  });
+
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isWithdrawConfirmOpen, setIsWithdrawConfirmOpen] = useState(false);
+  const [withdrawPassword, setWithdrawPassword] = useState('');
+
+  const withdrawMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const res = await fetch('/api/user/account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || '탈퇴 처리 중 오류가 발생했습니다.');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: '탈퇴 완료', description: '계정이 삭제되었습니다.' });
+      setLocation('/login');
+    },
+    onError: (error: Error) => {
+      toast({ title: '탈퇴 실패', description: error.message, variant: 'destructive' });
+    },
   });
 
   const changePasswordMutation = useMutation({
@@ -216,6 +244,25 @@ export default function ShopSettings() {
           </CardContent>
         </Card>
 
+        {/* 회원 탈퇴 */}
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" /> 회원 탈퇴
+            </CardTitle>
+            <CardDescription>
+              탈퇴 시 가맹점, 예약, 고객 데이터가 모두 삭제되며 복구할 수 없습니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+              onClick={() => setIsWithdrawDialogOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              회원 탈퇴
+            </Button>
+          </CardContent>
+        </Card>
+
       </main>
 
       {/* 비밀번호 변경 다이얼로그 */}
@@ -274,6 +321,75 @@ export default function ShopSettings() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 회원 탈퇴 - 비밀번호 확인 다이얼로그 */}
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={(open) => {
+        setIsWithdrawDialogOpen(open);
+        if (!open) setWithdrawPassword('');
+      }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" /> 회원 탈퇴
+            </DialogTitle>
+            <DialogDescription>
+              탈퇴하면 가맹점, 예약, 고객 데이터가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            <Label htmlFor="withdraw-password">비밀번호 확인</Label>
+            <Input
+              id="withdraw-password"
+              type="password"
+              value={withdrawPassword}
+              onChange={e => setWithdrawPassword(e.target.value)}
+              placeholder="현재 비밀번호를 입력하세요"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsWithdrawDialogOpen(false)}>취소</Button>
+            <Button
+              variant="destructive"
+              disabled={!withdrawPassword}
+              onClick={() => {
+                setIsWithdrawDialogOpen(false);
+                setIsWithdrawConfirmOpen(true);
+              }}
+            >
+              다음
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 회원 탈퇴 - 최종 확인 다이얼로그 */}
+      <AlertDialog open={isWithdrawConfirmOpen} onOpenChange={setIsWithdrawConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정말 탈퇴하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-semibold text-red-600">{shop?.name}</span> 가맹점과 모든 예약·고객 데이터가
+              영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsWithdrawConfirmOpen(false);
+              setWithdrawPassword('');
+            }}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={withdrawMutation.isPending}
+              onClick={() => withdrawMutation.mutate(withdrawPassword)}
+            >
+              {withdrawMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              탈퇴하기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
