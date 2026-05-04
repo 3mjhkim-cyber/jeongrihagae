@@ -182,6 +182,7 @@ export default function Subscription() {
         customer: {
           customerId: String((user as any).id),
           email: (user as any).email || (user as any).username + "@jeongrihagae.com",
+          phoneNumber: (user as any).shop?.phone || (user as any).phone || "01000000000",
         },
       });
       if (response?.billingKey) {
