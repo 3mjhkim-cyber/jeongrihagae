@@ -181,9 +181,9 @@ export default function Subscription() {
         issueName: "스탠다드 플랜 구독",
         customer: {
           customerId: String((user as any).id),
-          fullName: (user as any).shop?.ownerName || (user as any).shop?.name || (user as any).username || "정리하개 사용자",
-          email: (user as any).email || (user as any).username + "@jeongrihagae.com",
-          phoneNumber: (user as any).shop?.phone || (user as any).phone || "01000000000",
+          fullName: (user as any).shopName || (user as any).shop?.name || "정리하개",
+          email: (user as any).email || "info@jeongrihagae.com",
+          phoneNumber: ((user as any).phone || (user as any).shop?.phone || "01000000000").replace(/[^0-9]/g, ""),
         },
       });
       if (response?.billingKey) {
