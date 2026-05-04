@@ -179,7 +179,10 @@ export default function Subscription() {
         billingKeyMethod: "CARD",
         issueId: `issue_${Date.now()}`,
         issueName: "스탠다드 플랜 구독",
-        customer: { customerId: String((user as any).id) },
+        customer: {
+          customerId: String((user as any).id),
+          email: (user as any).email || (user as any).username + "@jeongrihagae.com",
+        },
       });
       if (response?.billingKey) {
         await attachAndPay(response.billingKey);
