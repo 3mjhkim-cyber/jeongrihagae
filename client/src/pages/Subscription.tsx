@@ -225,6 +225,7 @@ export default function Subscription() {
       setTimeout(() => cardFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
     }
   }, [showCardForm]);
+  const [showPayConfirmDialog, setShowPayConfirmDialog] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNote, setCancelNote] = useState("");
@@ -298,12 +299,18 @@ export default function Subscription() {
     setShowCardForm(true);
   };
 
-  const handleDirectCardSubmit = async () => {
+  const handleDirectCardSubmit = () => {
     const { number, expiryMonth, expiryYear, birth, password } = cardForm;
     if (!number || !expiryMonth || !expiryYear || !birth || !password) {
       toast({ title: "입력 오류", description: "모든 항목을 입력해주세요.", variant: "destructive" });
       return;
     }
+    setShowPayConfirmDialog(true);
+  };
+
+  const handleConfirmPay = async () => {
+    setShowPayConfirmDialog(false);
+    const { number, expiryMonth, expiryYear, birth, password } = cardForm;
     setIsRegisteringCard(true);
     try {
       const res = await apiRequest("POST", "/api/subscription/issue-billing-key-direct", {
@@ -655,6 +662,51 @@ export default function Subscription() {
         )}
 
       </div>
+
+      {/* ── 결제 확인 다이얼로그 ──────────────────────────────────────────────── */}
+      <Dialog open={showPayConfirmDialog} onOpenChange={setShowPayConfirmDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>결제 확인</DialogTitle>
+            <DialogDescription>
+              아래 카드로 결제를 진행하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-secondary/30 rounded-xl p-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">카드 번호</span>
+              <span className="font-mono font-medium">
+                {cardForm.number
+                  ? `•••• •••• •••• ${cardForm.number.replace(/\s/g, "").slice(-4)}`
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">유효기간</span>
+              <span className="font-mono font-medium">
+                {cardForm.expiryMonth && cardForm.expiryYear
+                  ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}`
+                  : "—"}
+              </span>
+            </div>
+            <div className="border-t pt-3 flex justify-between items-center">
+              <span className="text-muted-foreground">결제 금액</span>
+              <span className="text-lg font-bold text-primary">{PLAN.price.toLocaleString()}원</span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            결제 후 매월 자동으로 갱신됩니다. 언제든지 구독을 취소할 수 있습니다.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowPayConfirmDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleConfirmPay}>
+              결제하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── 데모 카드 등록 다이얼로그 ─────────────────────────────────────────── */}
       <Dialog open={showDemoCardDialog} onOpenChange={setShowDemoCardDialog}>
