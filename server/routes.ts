@@ -763,63 +763,6 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/payment/demo-confirm', requireAuth, async (req, res) => {
-    try {
-      const { tier, amount } = req.body;
-      const user = req.user as any;
-
-      if (!user.shopId) {
-        return res.status(400).json({ message: "가맹점 정보가 없습니다." });
-      }
-
-      const PLAN_PRICES: Record<string, number> = {
-        basic: 39000,
-        premium: 49000,
-        enterprise: 99000,
-      };
-
-      const validTier = tier && PLAN_PRICES[tier] ? tier : 'basic';
-      const expectedAmount = PLAN_PRICES[validTier];
-
-      if (amount !== expectedAmount) {
-        return res.status(400).json({ message: '결제 금액이 일치하지 않습니다.' });
-      }
-
-      const now = new Date();
-      const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      await storage.updateShopSubscription(user.shopId, {
-        subscriptionStatus: 'active',
-        subscriptionTier: validTier,
-        subscriptionStart: now,
-        subscriptionEnd: subscriptionEnd,
-      });
-
-      await storage.createSubscription({
-        shopId: user.shopId,
-        tier: validTier,
-        status: 'active',
-        amount: expectedAmount,
-        startDate: now,
-        endDate: subscriptionEnd,
-        autoRenew: true,
-        paymentMethod: 'demo',
-      });
-
-      res.json({
-        success: true,
-        message: '데모 결제가 완료되었습니다.',
-        subscription: {
-          status: 'active',
-          tier: validTier,
-          endDate: subscriptionEnd,
-        },
-      });
-    } catch (error: any) {
-      console.error('Demo payment error:', error);
-      res.status(500).json({ message: error.message || '결제 처리 중 오류가 발생했습니다.' });
-    }
-  });
 
   // 가맹점 등록 (등록 즉시 활성화 — 승인 절차 없음)
   app.post('/api/shops/register', async (req, res) => {
@@ -1858,6 +1801,64 @@ export async function registerRoutes(
    */
 
   // 자체 카드 폼 → 포트원 REST API로 빌링키 직접 발급 (PG 팝업 없음)
+  app.post('/api/payment/demo-confirm', requireSuperAdmin, async (req, res) => {
+    try {
+      const { tier, amount } = req.body;
+      const user = req.user as any;
+
+      if (!user.shopId) {
+        return res.status(400).json({ message: "가맹점 정보가 없습니다." });
+      }
+
+      const PLAN_PRICES: Record<string, number> = {
+        basic: 39000,
+        premium: 49000,
+        enterprise: 99000,
+      };
+
+      const validTier = tier && PLAN_PRICES[tier] ? tier : 'basic';
+      const expectedAmount = PLAN_PRICES[validTier];
+
+      if (amount !== expectedAmount) {
+        return res.status(400).json({ message: '결제 금액이 일치하지 않습니다.' });
+      }
+
+      const now = new Date();
+      const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      await storage.updateShopSubscription(user.shopId, {
+        subscriptionStatus: 'active',
+        subscriptionTier: validTier,
+        subscriptionStart: now,
+        subscriptionEnd: subscriptionEnd,
+      });
+
+      await storage.createSubscription({
+        shopId: user.shopId,
+        tier: validTier,
+        status: 'active',
+        amount: expectedAmount,
+        startDate: now,
+        endDate: subscriptionEnd,
+        autoRenew: true,
+        paymentMethod: 'demo',
+      });
+
+      res.json({
+        success: true,
+        message: '데모 결제가 완료되었습니다.',
+        subscription: {
+          status: 'active',
+          tier: validTier,
+          endDate: subscriptionEnd,
+        },
+      });
+    } catch (error: any) {
+      console.error('Demo payment error:', error);
+      res.status(500).json({ message: error.message || '결제 처리 중 오류가 발생했습니다.' });
+    }
+  });
+
   app.post('/api/subscription/issue-billing-key-direct', requireAuth, async (req, res) => {
     const user = req.user as any;
     const { cardNumber, expiryYear, expiryMonth, birth, passwordTwoDigits } = req.body;
@@ -2025,58 +2026,6 @@ export async function registerRoutes(
   });
 
   // 구독 신청
-  app.post('/api/subscriptions/subscribe', requireShopOwner, async (req, res) => {
-    const user = req.user!;
-    const { tier, paymentMethod } = req.body;
-
-    if (!tier || !paymentMethod) {
-      return res.status(400).json({ message: "tier and paymentMethod are required" });
-    }
-
-    const validTiers = ['basic', 'premium', 'enterprise'];
-    if (!validTiers.includes(tier)) {
-      return res.status(400).json({ message: "Invalid subscription tier" });
-    }
-
-    const shop = await storage.getShop(user.shopId);
-    if (!shop) {
-      return res.status(404).json({ message: "Shop not found" });
-    }
-
-    // 가격 설정
-    const prices: Record<string, number> = {
-      basic: 39000,
-      premium: 49000,
-      enterprise: 99000,
-    };
-
-    const amount = prices[tier];
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1); // 1개월 후
-
-    // 구독 생성
-    const subscription = await storage.createSubscription({
-      shopId: user.shopId,
-      tier,
-      status: 'active',
-      amount,
-      startDate,
-      endDate,
-      autoRenew: true,
-      paymentMethod,
-    });
-
-    // Shop의 구독 상태 업데이트
-    await storage.updateShopSubscription(user.shopId, {
-      subscriptionStatus: 'active',
-      subscriptionTier: tier,
-      subscriptionStart: startDate,
-      subscriptionEnd: endDate,
-    });
-
-    res.json({ success: true, subscription });
-  });
 
   // 구독 취소 (갱신 중단, subscriptionEnd까지 이용 가능)
   app.post('/api/subscriptions/cancel', requireShopOwner, async (req, res) => {
