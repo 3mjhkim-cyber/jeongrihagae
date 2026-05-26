@@ -92,17 +92,6 @@ function fmtDate(d: string | null | undefined) {
   return new Date(d).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
-function CardBrandBadge({ number }: { number: string }) {
-  const digits = number.replace(/\s/g, "");
-  const isVisa   = digits.startsWith("4");
-  const isMaster = digits.startsWith("5") || digits.startsWith("2");
-  if (!isVisa && !isMaster) return null;
-  return (
-    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wider text-muted-foreground/60 select-none pointer-events-none">
-      {isVisa ? "VISA" : "MASTER"}
-    </span>
-  );
-}
 
 interface CardFormProps {
   form: { number: string; expiryMonth: string; expiryYear: string; birth: string; password: string };
@@ -137,19 +126,16 @@ function CardForm({ form, onChange, onSubmit, onCancel, isLoading, price }: Card
         {/* 카드 번호 */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">카드 번호</label>
-          <div className="relative">
-            <input
-              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition pr-16"
-              placeholder="0000  0000  0000  0000"
-              maxLength={19}
-              value={form.number}
-              onChange={e => {
-                const v = e.target.value.replace(/\D/g, "").slice(0, 16);
-                onChange({ ...form, number: v.replace(/(.{4})/g, "$1 ").trim() });
-              }}
-            />
-            <CardBrandBadge number={form.number} />
-          </div>
+          <input
+            className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+            placeholder="0000  0000  0000  0000"
+            maxLength={19}
+            value={form.number}
+            onChange={e => {
+              const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+              onChange({ ...form, number: v.replace(/(.{4})/g, "$1 ").trim() });
+            }}
+          />
         </div>
 
         {/* 유효기간 + 비밀번호 */}
