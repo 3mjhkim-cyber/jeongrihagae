@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Check, CreditCard, ArrowLeft, AlertTriangle,
-  CalendarDays, Lock, RefreshCw, Scissors, Shield, Wifi,
+  CalendarDays, Lock, RefreshCw, Scissors, Shield,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -92,43 +92,131 @@ function fmtDate(d: string | null | undefined) {
   return new Date(d).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
-function formatCardPreview(num: string): string {
-  const digits = num.replace(/\s/g, "");
-  return Array.from({ length: 4 }, (_, i) => {
-    const chunk = digits.slice(i * 4, i * 4 + 4);
-    return chunk.padEnd(4, "·");
-  }).join("  ");
-}
-
-function CardPreview({ number, expiryMonth, expiryYear }: { number: string; expiryMonth: string; expiryYear: string }) {
+function CardBrandBadge({ number }: { number: string }) {
   const digits = number.replace(/\s/g, "");
   const isVisa   = digits.startsWith("4");
   const isMaster = digits.startsWith("5") || digits.startsWith("2");
+  if (!isVisa && !isMaster) return null;
   return (
-    <div className="relative w-full aspect-[1.586/1] rounded-2xl p-5 text-white shadow-xl overflow-hidden select-none"
-      style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d5986 50%, #1a3a6b 100%)" }}>
-      <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/5" />
-      <div className="absolute -right-4 -top-4 w-28 h-28 rounded-full bg-white/5" />
-      <div className="absolute -left-6 -bottom-6 w-36 h-36 rounded-full bg-white/5" />
-      <div className="flex items-center gap-2 mb-5">
-        <div className="w-10 h-7 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-md flex items-center justify-center">
-          <Wifi className="w-4 h-4 text-yellow-800 rotate-90 opacity-70" />
-        </div>
-        <div className="ml-auto text-xs font-semibold opacity-70">
-          {isVisa ? "VISA" : isMaster ? "MASTER" : "CARD"}
-        </div>
-      </div>
-      <div className="font-mono text-lg tracking-[0.3em] mb-5 min-h-[28px] drop-shadow">
-        {formatCardPreview(number)}
-      </div>
-      <div className="flex justify-between items-end">
-        <div>
-          <div className="text-[10px] text-white/50 uppercase tracking-wider mb-0.5">유효기간</div>
-          <div className="font-mono text-sm tracking-widest">
-            {expiryMonth || "MM"} / {expiryYear || "YY"}
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold tracking-wider text-muted-foreground/60 select-none pointer-events-none">
+      {isVisa ? "VISA" : "MASTER"}
+    </span>
+  );
+}
+
+interface CardFormProps {
+  form: { number: string; expiryMonth: string; expiryYear: string; birth: string; password: string };
+  onChange: (form: CardFormProps["form"]) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  price: number;
+}
+
+function CardForm({ form, onChange, onSubmit, onCancel, isLoading, price }: CardFormProps) {
+  return (
+    <div className="rounded-2xl border bg-card overflow-hidden">
+      {/* 헤더 */}
+      <div className="px-6 pt-6 pb-4 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <CreditCard className="w-4.5 h-4.5 text-primary" />
+            </div>
+            <span className="font-semibold text-base">카드 정보 입력</span>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">결제 금액</p>
+            <p className="text-lg font-bold text-primary">{price.toLocaleString()}원</p>
           </div>
         </div>
-        <div className="text-[10px] text-white/40 text-right">안전결제</div>
+      </div>
+
+      {/* 입력 필드 */}
+      <div className="px-6 py-5 space-y-5">
+        {/* 카드 번호 */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">카드 번호</label>
+          <div className="relative">
+            <input
+              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition pr-16"
+              placeholder="0000  0000  0000  0000"
+              maxLength={19}
+              value={form.number}
+              onChange={e => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                onChange({ ...form, number: v.replace(/(.{4})/g, "$1 ").trim() });
+              }}
+            />
+            <CardBrandBadge number={form.number} />
+          </div>
+        </div>
+
+        {/* 유효기간 + 비밀번호 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">유효기간</label>
+            <input
+              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+              placeholder="MM / YY"
+              maxLength={7}
+              value={form.expiryMonth
+                ? form.expiryYear
+                  ? `${form.expiryMonth} / ${form.expiryYear}`
+                  : form.expiryMonth
+                : ""}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                onChange({ ...form, expiryMonth: digits.slice(0, 2), expiryYear: digits.slice(2) });
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">비밀번호 앞 2자리</label>
+            <input
+              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+              type="password"
+              placeholder="• •"
+              maxLength={2}
+              value={form.password}
+              onChange={e => onChange({ ...form, password: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+            />
+          </div>
+        </div>
+
+        {/* 생년월일 */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            생년월일
+            <span className="ml-1.5 text-xs font-normal text-muted-foreground">법인은 사업자번호 10자리</span>
+          </label>
+          <input
+            className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+            placeholder="YYMMDD"
+            maxLength={10}
+            value={form.birth}
+            onChange={e => onChange({ ...form, birth: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+          />
+        </div>
+
+        {/* 보안 안내 */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Shield className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+          <span>SSL 암호화로 안전하게 보호됩니다. 카드 정보는 저장되지 않습니다.</span>
+        </div>
+      </div>
+
+      {/* 버튼 */}
+      <div className="px-6 pb-6 flex gap-3">
+        <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={onCancel} disabled={isLoading}>
+          취소
+        </Button>
+        <Button className="flex-1 h-12 rounded-xl font-semibold text-base" onClick={onSubmit} disabled={isLoading}>
+          {isLoading
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</>
+            : <><Lock className="w-4 h-4 mr-2" />{price.toLocaleString()}원 결제</>
+          }
+        </Button>
       </div>
     </div>
   );
@@ -365,47 +453,15 @@ export default function Subscription() {
           </div>
 
           {showCardForm && (
-            <div ref={cardFormRef} className="rounded-2xl border shadow-md bg-card overflow-hidden mt-2">
-              <CardPreview number={cardForm.number} expiryMonth={cardForm.expiryMonth} expiryYear={cardForm.expiryYear} />
-              <div className="p-5 space-y-4">
-                <div className="flex items-center justify-between bg-primary/5 rounded-xl px-4 py-3">
-                  <span className="text-sm text-muted-foreground font-medium">결제 금액</span>
-                  <span className="text-2xl font-bold text-primary">{PLAN.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-1">원/월</span></span>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label className="text-xs text-muted-foreground">카드번호</Label>
-                  <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="0000  0000  0000  0000" maxLength={19} value={cardForm.number}
-                    onChange={e => { const v = e.target.value.replace(/\D/g, "").slice(0, 16); setCardForm({ ...cardForm, number: v.replace(/(.{4})/g, "$1 ").trim() }); }} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs text-muted-foreground">유효기간</Label>
-                    <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="MM / YY" maxLength={7}
-                      value={cardForm.expiryMonth ? cardForm.expiryYear ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}` : cardForm.expiryMonth : ""}
-                      onChange={e => { const digits = e.target.value.replace(/\D/g, "").slice(0, 4); setCardForm({ ...cardForm, expiryMonth: digits.slice(0, 2), expiryYear: digits.slice(2) }); }} />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs text-muted-foreground">비밀번호 앞 2자리</Label>
-                    <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" type="password" placeholder="• •" maxLength={2} value={cardForm.password}
-                      onChange={e => setCardForm({ ...cardForm, password: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
-                  </div>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label className="text-xs text-muted-foreground">생년월일 6자리 (개인) / 사업자번호 10자리 (법인)</Label>
-                  <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="YYMMDD" maxLength={10} value={cardForm.birth}
-                    onChange={e => setCardForm({ ...cardForm, birth: e.target.value.replace(/\D/g, "").slice(0, 10) })} />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/40 rounded-lg px-3 py-2">
-                  <Shield className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                  <span>SSL 암호화로 안전하게 보호됩니다. 카드 정보는 저장되지 않습니다.</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setShowCardForm(false)} disabled={isRegisteringCard}>취소</Button>
-                  <Button className="flex-1" onClick={handleDirectCardSubmit} disabled={isRegisteringCard}>
-                    {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><Lock className="w-4 h-4 mr-2" />{PLAN.price.toLocaleString()}원 결제</>}
-                  </Button>
-                </div>
-              </div>
+            <div ref={cardFormRef} className="mt-2">
+              <CardForm
+                form={cardForm}
+                onChange={setCardForm}
+                onSubmit={handleDirectCardSubmit}
+                onCancel={() => setShowCardForm(false)}
+                isLoading={isRegisteringCard}
+                price={PLAN.price}
+              />
             </div>
           )}
         </div>
@@ -532,47 +588,15 @@ export default function Subscription() {
               </Button>
             )}
             {showCardForm && (
-              <div ref={cardFormRef} className="rounded-2xl border shadow-md bg-card overflow-hidden">
-                <CardPreview number={cardForm.number} expiryMonth={cardForm.expiryMonth} expiryYear={cardForm.expiryYear} />
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center justify-between bg-primary/5 rounded-xl px-4 py-3">
-                    <span className="text-sm text-muted-foreground font-medium">결제 금액</span>
-                    <span className="text-2xl font-bold text-primary">{PLAN.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground ml-1">원/월</span></span>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs text-muted-foreground">카드번호</Label>
-                    <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="0000  0000  0000  0000" maxLength={19} value={cardForm.number}
-                      onChange={e => { const v = e.target.value.replace(/\D/g, "").slice(0, 16); setCardForm({ ...cardForm, number: v.replace(/(.{4})/g, "$1 ").trim() }); }} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">유효기간</Label>
-                      <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="MM / YY" maxLength={7}
-                        value={cardForm.expiryMonth ? cardForm.expiryYear ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}` : cardForm.expiryMonth : ""}
-                        onChange={e => { const digits = e.target.value.replace(/\D/g, "").slice(0, 4); setCardForm({ ...cardForm, expiryMonth: digits.slice(0, 2), expiryYear: digits.slice(2) }); }} />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">비밀번호 앞 2자리</Label>
-                      <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" type="password" placeholder="• •" maxLength={2} value={cardForm.password}
-                        onChange={e => setCardForm({ ...cardForm, password: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
-                    </div>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs text-muted-foreground">생년월일 6자리 (개인) / 사업자번호 10자리 (법인)</Label>
-                    <input className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="YYMMDD" maxLength={10} value={cardForm.birth}
-                      onChange={e => setCardForm({ ...cardForm, birth: e.target.value.replace(/\D/g, "").slice(0, 10) })} />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/40 rounded-lg px-3 py-2">
-                    <Shield className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                    <span>SSL 암호화로 안전하게 보호됩니다. 카드 정보는 저장되지 않습니다.</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowCardForm(false)} disabled={isRegisteringCard}>취소</Button>
-                    <Button className="flex-1" onClick={handleDirectCardSubmit} disabled={isRegisteringCard}>
-                      {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><Lock className="w-4 h-4 mr-2" />{PLAN.price.toLocaleString()}원 결제</>}
-                    </Button>
-                  </div>
-                </div>
+              <div ref={cardFormRef}>
+                <CardForm
+                  form={cardForm}
+                  onChange={setCardForm}
+                  onSubmit={handleDirectCardSubmit}
+                  onCancel={() => setShowCardForm(false)}
+                  isLoading={isRegisteringCard}
+                  price={PLAN.price}
+                />
               </div>
             )}
           </div>
