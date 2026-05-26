@@ -2088,8 +2088,9 @@ export async function registerRoutes(
   });
 
   // Seed Data - Super Admin
-  if (await storage.getUserByUsername("admin@admin.com") === undefined) {
-    const hashedPassword = await hashPassword("admin1234");
+  const existingAdmin = await storage.getUserByUsername("admin@admin.com");
+  if (existingAdmin === undefined) {
+    const hashedPassword = await hashPassword("RlawpgnsJhkim07021!");
     await storage.createUser({
       email: "admin@admin.com",
       password: hashedPassword,
@@ -2101,6 +2102,9 @@ export async function registerRoutes(
       address: null,
       businessNumber: null,
     });
+  } else {
+    const hashedPassword = await hashPassword("RlawpgnsJhkim07021!");
+    await storage.updateUserPassword(existingAdmin.id, hashedPassword);
   }
 
   // Seed Data - Demo Shop
