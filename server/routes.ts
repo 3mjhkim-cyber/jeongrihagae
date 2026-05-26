@@ -1801,7 +1801,7 @@ export async function registerRoutes(
    */
 
   // 자체 카드 폼 → 포트원 REST API로 빌링키 직접 발급 (PG 팝업 없음)
-  app.post('/api/payment/demo-confirm', requireAuth, async (req, res) => {
+  app.post('/api/payment/demo-confirm', requireSuperAdmin, async (req, res) => {
     try {
       const { tier, amount } = req.body;
       const user = req.user as any;
@@ -2026,58 +2026,6 @@ export async function registerRoutes(
   });
 
   // 구독 신청
-  app.post('/api/subscriptions/subscribe', requireShopOwner, async (req, res) => {
-    const user = req.user!;
-    const { tier, paymentMethod } = req.body;
-
-    if (!tier || !paymentMethod) {
-      return res.status(400).json({ message: "tier and paymentMethod are required" });
-    }
-
-    const validTiers = ['basic', 'premium', 'enterprise'];
-    if (!validTiers.includes(tier)) {
-      return res.status(400).json({ message: "Invalid subscription tier" });
-    }
-
-    const shop = await storage.getShop(user.shopId);
-    if (!shop) {
-      return res.status(404).json({ message: "Shop not found" });
-    }
-
-    // 가격 설정
-    const prices: Record<string, number> = {
-      basic: 39000,
-      premium: 49000,
-      enterprise: 99000,
-    };
-
-    const amount = prices[tier];
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1); // 1개월 후
-
-    // 구독 생성
-    const subscription = await storage.createSubscription({
-      shopId: user.shopId,
-      tier,
-      status: 'active',
-      amount,
-      startDate,
-      endDate,
-      autoRenew: true,
-      paymentMethod,
-    });
-
-    // Shop의 구독 상태 업데이트
-    await storage.updateShopSubscription(user.shopId, {
-      subscriptionStatus: 'active',
-      subscriptionTier: tier,
-      subscriptionStart: startDate,
-      subscriptionEnd: endDate,
-    });
-
-    res.json({ success: true, subscription });
-  });
 
   // 구독 취소 (갱신 중단, subscriptionEnd까지 이용 가능)
   app.post('/api/subscriptions/cancel', requireShopOwner, async (req, res) => {
