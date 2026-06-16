@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { useScissorCursor } from "@/hooks/useScissorCursor";
 
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
@@ -73,6 +74,7 @@ function Router() {
 }
 
 function App() {
+  useScissorCursor();
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
