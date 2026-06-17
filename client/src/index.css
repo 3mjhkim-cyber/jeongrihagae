@@ -57,6 +57,7 @@
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
 
+  --font-heading: 'Stylish', sans-serif;
   --font-sans: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
@@ -157,8 +158,8 @@
   }
 
   h1, h2, h3 {
-    font-family: 'Nanum Square Round', 'Pretendard', sans-serif;
-    font-weight: 800;
+    font-family: 'Stylish', sans-serif;
+    font-weight: 400;
     line-height: 1.35;
   }
 }
