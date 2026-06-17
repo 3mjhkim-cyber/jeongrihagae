@@ -19,6 +19,7 @@ import { Slider } from "@/components/ui/slider";
 type Tab = "dashboard" | "customers" | "calendar";
 
 // ─── FadeUp wrapper ──────────────────────────────────────────────────────────
+// CSS transition 방식: [data-fadeup] 선택자로 초기 숨김, visible로 드러냄
 function FadeUp({ children, delay = 0, className }: {
   children: React.ReactNode; delay?: number; className?: string;
 }) {
@@ -26,19 +27,25 @@ function FadeUp({ children, delay = 0, className }: {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    el.style.opacity = "0";
-    el.style.transform = "translateY(24px)";
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        el.style.transition = `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`;
-        el.style.opacity = "1";
-        el.style.transform = "translateY(0)";
-        observer.disconnect();
-      }
-    }, { threshold: 0.15 });
-    observer.observe(el);
-    return () => observer.disconnect();
+    // 트랜지션 딜레이 설정 후 hidden 상태 시작
+    el.style.transitionDelay = `${delay}ms`;
+    el.setAttribute("data-fadeup", "hidden");
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.setAttribute("data-fadeup", "visible");
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+    // 한 프레임 뒤에 관찰 시작 → 브라우저가 hidden 상태를 먼저 렌더링하도록
+    const id = requestAnimationFrame(() => observer.observe(el));
+    return () => {
+      cancelAnimationFrame(id);
+      observer.disconnect();
+    };
   }, [delay]);
   return <div ref={ref} className={className}>{children}</div>;
 }
@@ -47,9 +54,10 @@ function FadeUp({ children, delay = 0, className }: {
 function CountUpAmount({ value, className }: { value: number; className?: string }) {
   const [display, setDisplay] = useState(0);
   const triggered = useRef(false);
+  const rafId = useRef(0);
   const ref = useRef<HTMLSpanElement>(null);
 
-  // once triggered, keep display in sync with live slider changes
+  // 슬라이더로 값이 바뀌면 카운트업 이후엔 즉시 반영
   useEffect(() => {
     if (triggered.current) setDisplay(value);
   }, [value]);
@@ -57,53 +65,88 @@ function CountUpAmount({ value, className }: { value: number; className?: string
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    // prefers-reduced-motion이면 바로 최종값
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(value); return;
+      setDisplay(value);
+      triggered.current = true;
+      return;
     }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !triggered.current) {
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || triggered.current) return;
         triggered.current = true;
         observer.disconnect();
+
         const target = value;
         const duration = 1200;
-        const start = performance.now();
+        const startTime = performance.now();
+
         const step = (now: number) => {
-          const t = Math.min((now - start) / duration, 1);
-          const eased = 1 - Math.pow(1 - t, 3);
+          const t = Math.min((now - startTime) / duration, 1);
+          const eased = 1 - (1 - t) ** 3; // easeOutCubic
           setDisplay(Math.round(eased * target));
-          if (t < 1) requestAnimationFrame(step);
-          else setDisplay(target);
+          if (t < 1) {
+            rafId.current = requestAnimationFrame(step);
+          } else {
+            setDisplay(target);
+          }
         };
-        requestAnimationFrame(step);
-      }
-    }, { threshold: 0.15 });
+        rafId.current = requestAnimationFrame(step);
+      },
+      { threshold: 0.2 }
+    );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(rafId.current);
+    };
+  // value는 첫 렌더 값만 캡처하면 됨 (이후 변경은 위 effect가 처리)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <span ref={ref} className={className}>{display.toLocaleString("ko-KR")}원</span>;
+  return (
+    <span ref={ref} className={className}>
+      {display.toLocaleString("ko-KR")}원
+    </span>
+  );
 }
 
 // ─── RippleButton ────────────────────────────────────────────────────────────
 function RippleButton({ children, className, onClick, style, ...props }:
   React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const handleClick = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const btn = e.currentTarget;
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const ripple = document.createElement("span");
-      ripple.style.cssText = `position:absolute;border-radius:50%;background:rgba(255,255,255,0.35);width:10px;height:10px;left:${x - 5}px;top:${y - 5}px;transform:scale(1);animation:rippleOut 0.6s ease-out forwards;pointer-events:none;`;
-      btn.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 620);
-    }
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ripple = document.createElement("span");
+    const size = Math.max(rect.width, rect.height) * 2;
+    ripple.style.cssText = [
+      "position:absolute",
+      "border-radius:50%",
+      "background:rgba(255,255,255,0.4)",
+      `width:${size}px`,
+      `height:${size}px`,
+      `left:${x - size / 2}px`,
+      `top:${y - size / 2}px`,
+      "transform:scale(0)",
+      "animation:rippleOut 0.6s ease-out forwards",
+      "pointer-events:none",
+    ].join(";");
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 650);
     onClick?.(e);
   }, [onClick]);
+
   return (
-    <button className={className} onClick={handleClick}
-      style={{ position: "relative", overflow: "hidden", ...style }} {...props}>
+    <button
+      className={className}
+      onClick={handleClick}
+      style={{ position: "relative", overflow: "hidden", ...style }}
+      {...props}
+    >
       {children}
     </button>
   );
@@ -617,22 +660,29 @@ export default function Home() {
 
   // ── 타이핑 효과 ──────────────────────────────────────────
   const TYPING_TEXT = "이제 제대로 정리하세요";
-  const [typedCount, setTypedCount] = useState(0);
+  const TYPING_SPEED = 80; // ms per character
+  const [typedCount, setTypedCount] = useState(
+    // reduced-motion이면 처음부터 전체 텍스트
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? TYPING_TEXT.length
+      : 0
+  );
   const typingDone = typedCount >= TYPING_TEXT.length;
+
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setTypedCount(TYPING_TEXT.length); return;
-    }
-    const delay = setTimeout(() => {
-      const interval = setInterval(() => {
-        setTypedCount(c => {
-          if (c >= TYPING_TEXT.length) { clearInterval(interval); return c; }
-          return c + 1;
-        });
-      }, 75);
-      return () => clearInterval(interval);
+    if (typedCount >= TYPING_TEXT.length) return; // reduced-motion 시 스킵
+    let count = 0;
+    const timeoutId = setTimeout(() => {
+      const intervalId = setInterval(() => {
+        count += 1;
+        setTypedCount(count);
+        if (count >= TYPING_TEXT.length) clearInterval(intervalId);
+      }, TYPING_SPEED);
+      return () => clearInterval(intervalId);
     }, 500);
-    return () => clearTimeout(delay);
+    return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
