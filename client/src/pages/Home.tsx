@@ -18,46 +18,14 @@ import { Slider } from "@/components/ui/slider";
 
 type Tab = "dashboard" | "customers" | "calendar";
 
-// ─── FadeUp wrapper ──────────────────────────────────────────────────────────
-// CSS transition 방식: [data-fadeup] 선택자로 초기 숨김, visible로 드러냄
-function FadeUp({ children, delay = 0, className }: {
-  children: React.ReactNode; delay?: number; className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // 트랜지션 딜레이 설정 후 hidden 상태 시작
-    el.style.transitionDelay = `${delay}ms`;
-    el.setAttribute("data-fadeup", "hidden");
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.setAttribute("data-fadeup", "visible");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.12 }
-    );
-    // 한 프레임 뒤에 관찰 시작 → 브라우저가 hidden 상태를 먼저 렌더링하도록
-    const id = requestAnimationFrame(() => observer.observe(el));
-    return () => {
-      cancelAnimationFrame(id);
-      observer.disconnect();
-    };
-  }, [delay]);
-  return <div ref={ref} className={className}>{children}</div>;
-}
-
 // ─── CountUpAmount ───────────────────────────────────────────────────────────
 function CountUpAmount({ value, className }: { value: number; className?: string }) {
-  const [display, setDisplay] = useState(0);
+  const [display, setDisplay] = useState(value); // 초기값 = 실제값 (0원으로 시작 안함)
   const triggered = useRef(false);
-  const rafId = useRef(0);
+  const rafRef = useRef(0);
   const ref = useRef<HTMLSpanElement>(null);
 
-  // 슬라이더로 값이 바뀌면 카운트업 이후엔 즉시 반영
+  // 슬라이더 조작 시 카운트업 이후엔 즉시 반영
   useEffect(() => {
     if (triggered.current) setDisplay(value);
   }, [value]);
@@ -65,52 +33,32 @@ function CountUpAmount({ value, className }: { value: number; className?: string
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
-    // prefers-reduced-motion이면 바로 최종값
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(value);
       triggered.current = true;
       return;
     }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || triggered.current) return;
-        triggered.current = true;
-        observer.disconnect();
-
-        const target = value;
-        const duration = 1200;
-        const startTime = performance.now();
-
-        const step = (now: number) => {
-          const t = Math.min((now - startTime) / duration, 1);
-          const eased = 1 - (1 - t) ** 3; // easeOutCubic
-          setDisplay(Math.round(eased * target));
-          if (t < 1) {
-            rafId.current = requestAnimationFrame(step);
-          } else {
-            setDisplay(target);
-          }
-        };
-        rafId.current = requestAnimationFrame(step);
-      },
-      { threshold: 0.2 }
-    );
-    observer.observe(el);
-    return () => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || triggered.current) return;
+      triggered.current = true;
       observer.disconnect();
-      cancelAnimationFrame(rafId.current);
-    };
-  // value는 첫 렌더 값만 캡처하면 됨 (이후 변경은 위 effect가 처리)
+      const target = value;
+      const duration = 1200;
+      const start = performance.now();
+      function tick(now: number) {
+        const p = Math.min((now - start) / duration, 1);
+        const ease = 1 - (1 - p) ** 3; // easeOutCubic
+        setDisplay(Math.round(ease * target));
+        if (p < 1) rafRef.current = requestAnimationFrame(tick);
+        else setDisplay(target);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    }, { threshold: 0.2 });
+    observer.observe(el);
+    return () => { observer.disconnect(); cancelAnimationFrame(rafRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <span ref={ref} className={className}>
-      {display.toLocaleString("ko-KR")}원
-    </span>
-  );
+  return <span ref={ref} className={className}>{display.toLocaleString("ko-KR")}원</span>;
 }
 
 // ─── RippleButton ────────────────────────────────────────────────────────────
@@ -121,32 +69,15 @@ function RippleButton({ children, className, onClick, style, ...props }:
     const rect = btn.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const ripple = document.createElement("span");
-    const size = Math.max(rect.width, rect.height) * 2;
-    ripple.style.cssText = [
-      "position:absolute",
-      "border-radius:50%",
-      "background:rgba(255,255,255,0.4)",
-      `width:${size}px`,
-      `height:${size}px`,
-      `left:${x - size / 2}px`,
-      `top:${y - size / 2}px`,
-      "transform:scale(0)",
-      "animation:rippleOut 0.6s ease-out forwards",
-      "pointer-events:none",
-    ].join(";");
-    btn.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 650);
+    const r = document.createElement("span");
+    r.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.35);pointer-events:none;animation:ripple 0.6s ease-out forwards;`;
+    btn.appendChild(r);
+    setTimeout(() => r.remove(), 600);
     onClick?.(e);
   }, [onClick]);
-
   return (
-    <button
-      className={className}
-      onClick={handleClick}
-      style={{ position: "relative", overflow: "hidden", ...style }}
-      {...props}
-    >
+    <button className={className} onClick={handleClick}
+      style={{ position: "relative", overflow: "hidden", ...style }} {...props}>
       {children}
     </button>
   );
@@ -509,12 +440,12 @@ function FeatureSection() {
   return (
     <section id="features" className="py-16 md:py-24 px-4">
       <div className="max-w-5xl mx-auto">
-        <FadeUp className="text-center mb-12">
+        <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
             미용샵 운영에 필요한 건 다 있어요
           </h2>
           <p className="text-gray-500">복잡한 교육 없이 오늘부터 바로 쓸 수 있어요</p>
-        </FadeUp>
+        </div>
 
         {/* Card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
@@ -526,12 +457,12 @@ function FeatureSection() {
               ? "rotate(12deg) scale(1.15)"
               : isPinned ? "scale(1.05)" : "scale(1)";
             return (
-              <FadeUp key={f.id} delay={i * 100}>
               <div
+                key={f.id}
                 onMouseEnter={() => setHoveredId(f.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleClick(f.id)}
-                className="bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none h-full"
+                className="bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
                 style={{
                   borderColor: isActive ? f.color : "#f3f4f6",
                   transform: isActive ? "translateY(-4px)" : "none",
@@ -567,7 +498,6 @@ function FeatureSection() {
                   {f.desc}
                 </p>
               </div>
-              </FadeUp>
             );
           })}
         </div>
@@ -658,31 +588,19 @@ export default function Home() {
     { id: "calendar", label: "예약 캘린더" },
   ];
 
-  // ── 타이핑 효과 ──────────────────────────────────────────
-  const TYPING_TEXT = "이제 제대로 정리하세요";
-  const TYPING_SPEED = 80; // ms per character
-  const [typedCount, setTypedCount] = useState(
-    // reduced-motion이면 처음부터 전체 텍스트
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? TYPING_TEXT.length
-      : 0
-  );
-  const typingDone = typedCount >= TYPING_TEXT.length;
-
+  // ── 타이핑 효과: CSS steps() 애니메이션 완료 후 커서 제거 ──
+  const typingRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (typedCount >= TYPING_TEXT.length) return; // reduced-motion 시 스킵
-    let count = 0;
-    const timeoutId = setTimeout(() => {
-      const intervalId = setInterval(() => {
-        count += 1;
-        setTypedCount(count);
-        if (count >= TYPING_TEXT.length) clearInterval(intervalId);
-      }, TYPING_SPEED);
-      return () => clearInterval(intervalId);
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const el = typingRef.current;
+    if (!el) return;
+    const onEnd = (e: AnimationEvent) => {
+      if (e.animationName === "blink") {
+        el.style.borderRight = "none";
+        el.style.animation = "none";
+      }
+    };
+    el.addEventListener("animationend", onEnd);
+    return () => el.removeEventListener("animationend", onEnd);
   }, []);
 
   return (
@@ -738,18 +656,11 @@ export default function Home() {
             미용샵 운영,
             <br />
             <span className="text-primary relative inline-block">
-              {TYPING_TEXT.slice(0, typedCount)}
-              {!typingDone && (
-                <span
-                  aria-hidden="true"
-                  style={{ animation: "blink 0.8s step-start infinite", borderRight: "2px solid currentColor", marginLeft: "1px" }}
-                />
-              )}
+              <span ref={typingRef} className="typing-text">이제 제대로 정리하세요</span>
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
                 preserveAspectRatio="none"
-                style={{ opacity: typingDone ? 1 : 0, transition: "opacity 0.4s ease" }}
               >
                 <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
               </svg>
@@ -785,9 +696,9 @@ export default function Home() {
       {/* ── 4. Product Showcase ────────────────────────────────── */}
       <section className="py-16 md:py-24 bg-gray-50 px-4">
         <div className="max-w-4xl mx-auto">
-          <FadeUp className="text-center mb-10">
+          <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">이렇게 생겼어요</h2>
-          </FadeUp>
+          </div>
           {/* Tabs */}
           <div className="flex gap-1 bg-white rounded-xl p-1 border border-gray-100 mb-6 w-fit mx-auto shadow-sm">
             {tabs.map((tab) => (
@@ -816,14 +727,14 @@ export default function Home() {
       {/* ── 4. No-show Calculator ──────────────────────────────── */}
       <section className="py-16 md:py-24 px-4">
         <div className="max-w-5xl mx-auto">
-          <FadeUp className="text-center mb-12">
+          <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
               지금 얼마를 잃고 있는지 확인해보세요
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto" style={{ wordBreak: "keep-all" }}>
               노쇼 한 건은 단순한 빈 시간이 아니에요. 카카오 알림톡 리마인더로 노쇼를 확실히 줄일 수 있어요.
             </p>
-          </FadeUp>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left: Sliders + Kakao preview */}
@@ -923,7 +834,6 @@ export default function Home() {
 
             {/* Right: Result cards */}
             <div className="space-y-4">
-              <FadeUp delay={0}>
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 월 손실</p>
                 <p className="text-2xl font-bold text-red-500">
@@ -933,8 +843,6 @@ export default function Home() {
                   노쇼 {noShowCount}건 × 단가 {fmt(avgPrice)}
                 </p>
               </div>
-              </FadeUp>
-              <FadeUp delay={100}>
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 연간 손실</p>
                 <p className="text-2xl font-bold text-red-500">
@@ -942,8 +850,6 @@ export default function Home() {
                 </p>
                 <p className="text-xs text-gray-400 mt-1">월 {fmt(monthlyLoss)} × 12개월</p>
               </div>
-              </FadeUp>
-              <FadeUp delay={200}>
               <div className="bg-white rounded-xl border-l-4 border-primary border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">정리하개 리마인더로 회수 가능한 금액</p>
                 <div className="flex items-baseline gap-1.5">
@@ -956,8 +862,6 @@ export default function Home() {
                   연간 약 {fmt(yearlyRecoverable)} 회수 가능
                 </p>
               </div>
-              </FadeUp>
-              <FadeUp delay={300}>
               <div className="bg-white rounded-xl border-l-4 border-primary border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">정리하개 연간 비용</p>
                 <p className="text-2xl font-bold text-gray-800">
@@ -967,7 +871,6 @@ export default function Home() {
                   회수 금액이 비용을 훨씬 초과해요
                 </p>
               </div>
-              </FadeUp>
             </div>
           </div>
         </div>
@@ -976,7 +879,7 @@ export default function Home() {
       {/* ── 5. ROI Copy ────────────────────────────────────────── */}
       <section className="py-16 md:py-24 px-4 bg-[#EFF6FF]">
         <div className="max-w-4xl mx-auto">
-          <FadeUp className="text-center mb-10">
+          <div className="text-center mb-10">
             <span className="text-xs font-semibold text-primary uppercase tracking-wide">
               월 39,000원의 가치
             </span>
@@ -986,7 +889,7 @@ export default function Home() {
             <p className="text-gray-500 max-w-xl mx-auto" style={{ wordBreak: "keep-all" }}>
               노쇼로 잃는 돈, 관리 못 해서 떠나는 단골 고객. 정리하개 하나로 이 손실을 막을 수 있어요.
             </p>
-          </FadeUp>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
             {/* Card 1 */}
@@ -1013,20 +916,20 @@ export default function Home() {
             </div>
           </div>
 
-          <FadeUp className="text-center">
+          <div className="text-center">
             <Link href="/register">
               <RippleButton className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
                 30일 무료로 시작하기
               </RippleButton>
             </Link>
             <p className="mt-3 text-sm text-gray-400">신용카드 불필요 · 언제든 해지 가능</p>
-          </FadeUp>
+          </div>
         </div>
       </section>
 
       {/* ── 7. Bottom CTA ──────────────────────────────────────── */}
       <section className="py-16 md:py-24 px-4 bg-primary">
-        <FadeUp className="max-w-xl mx-auto text-center">
+        <div className="max-w-xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">지금 바로 시작해보세요</h2>
           <p className="text-white/70 mb-8">30일 동안 모든 기능을 무료로 사용할 수 있어요</p>
           <Link href="/register">
@@ -1035,7 +938,7 @@ export default function Home() {
             </RippleButton>
           </Link>
           <p className="mt-4 text-white/50 text-sm">30일 무료 체험 후 월 39,000원</p>
-        </FadeUp>
+        </div>
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────── */}

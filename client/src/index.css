@@ -475,31 +475,32 @@
 }
 
 /* ── 인터랙션 애니메이션 ────────────────────────────────── */
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+@keyframes typeOn {
+  from { width: 0; }
+  to   { width: 100%; }
 }
-@keyframes rippleOut {
-  to { transform: scale(4); opacity: 0; }
+@keyframes blink {
+  0%, 100% { border-color: #3B5BDB; }
+  50%       { border-color: transparent; }
+}
+@keyframes ripple {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
+  to   { transform: translate(-50%, -50%) scale(4); opacity: 0; }
 }
 
-/* FadeUp — CSS transition으로 처리 (data 속성 기반) */
-[data-fadeup] {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.55s ease, transform 0.55s ease;
-}
-[data-fadeup="visible"] {
-  opacity: 1;
-  transform: translateY(0);
+.typing-text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid #3B5BDB;
+  vertical-align: bottom;
+  animation:
+    typeOn 3.2s steps(11, end) 0.5s both,
+    blink  1s   step-end      0.5s 4;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-fadeup] {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
+  .typing-text { animation: none; border-right: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
