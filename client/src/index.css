@@ -482,12 +482,24 @@
 @keyframes rippleOut {
   to { transform: scale(4); opacity: 0; }
 }
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+
+/* FadeUp — CSS transition으로 처리 (data 속성 기반) */
+[data-fadeup] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+[data-fadeup="visible"] {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-fadeup] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
