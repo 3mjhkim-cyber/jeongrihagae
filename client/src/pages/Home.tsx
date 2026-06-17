@@ -290,6 +290,211 @@ function CalendarMockup() {
   );
 }
 
+// ─── Feature Section ────────────────────────────────────────────────────────
+const FEATURES = [
+  {
+    id: "calendar",
+    icon: <CalendarDays className="w-6 h-6" />,
+    bigIcon: <CalendarDays className="w-9 h-9" />,
+    title: "예약 캘린더",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
+    panelTitle: "하루 예약을 한눈에 파악하세요",
+    desc: "일·주·월 뷰를 자유롭게 전환하며 예약 현황을 확인할 수 있어요. 온라인 예약 링크를 생성해 네이버 플레이스, 카카오맵, 인스타그램 어디서든 바로 접수 가능해요.",
+    tags: ["일/주/월 뷰 전환", "온라인 예약 접수", "예약 확정·취소 관리", "예약금 설정"],
+  },
+  {
+    id: "customers",
+    icon: <Users className="w-6 h-6" />,
+    bigIcon: <Users className="w-9 h-9" />,
+    title: "고객 관리",
+    color: "#5BB87A",
+    pastel: "#EDFBF1",
+    panelTitle: "모든 채널 고객을 한곳에서",
+    desc: "반짝·네이버·카카오 등 어느 플랫폼에서 온 손님이든 정리하개에서 통합 관리해요. 강아지별 미용 이력, 특이사항, 방문 주기를 한눈에 볼 수 있어요.",
+    tags: ["VIP 자동 분류", "60일 미방문 알림", "강아지별 미용 이력", "전채널 통합 관리"],
+  },
+  {
+    id: "revenue",
+    icon: <BarChart3 className="w-6 h-6" />,
+    bigIcon: <BarChart3 className="w-9 h-9" />,
+    title: "매출 대시보드",
+    color: "#E8A020",
+    pastel: "#FFF8EC",
+    panelTitle: "숫자가 아닌 인사이트를 드려요",
+    desc: "이번 달 매출, 평균 단가, 재방문율을 한눈에 확인하고 어떤 고객을 잡아야 할지 알려줘요. 60일 이상 미방문 고객을 자동으로 감지해 리텐션을 높여요.",
+    tags: ["월 매출 요약", "재방문·신규 비율", "미방문 고객 감지", "전월 대비 분석"],
+  },
+  {
+    id: "kakao",
+    icon: <MessageSquare className="w-6 h-6" />,
+    bigIcon: <MessageSquare className="w-9 h-9" />,
+    title: "카카오 알림톡",
+    color: "#D4A000",
+    pastel: "#FFFBEB",
+    panelTitle: "노쇼 걱정 없이 자동으로",
+    desc: "예약 확정 시 확인 메시지, 전날 리마인더까지 자동으로 발송돼요. 샵 이름으로 발송되어 고객에게 신뢰감을 주고, 노쇼를 확실히 줄일 수 있어요.",
+    tags: ["예약 확인 자동 발송", "전날 리마인더", "샵 브랜드 발송", "발송 이력 관리"],
+  },
+  {
+    id: "services",
+    icon: <Scissors className="w-6 h-6" />,
+    bigIcon: <Scissors className="w-9 h-9" />,
+    title: "서비스 관리",
+    color: "#6B5FBF",
+    pastel: "#F3F0FF",
+    panelTitle: "메뉴 구성을 자유롭게 설정해요",
+    desc: "전체 미용, 부분 미용, 목욕 등 서비스별로 가격과 소요 시간을 직접 설정해요. 예약 시 자동으로 소요 시간이 반영되어 일정 충돌을 방지해요.",
+    tags: ["서비스별 가격 설정", "소요 시간 자동 반영", "부분 미용·목욕 분리", "메뉴 추가·수정 자유"],
+  },
+  {
+    id: "link",
+    icon: <Link2 className="w-6 h-6" />,
+    bigIcon: <Link2 className="w-9 h-9" />,
+    title: "예약 링크",
+    color: "#E05580",
+    pastel: "#FFF0F5",
+    panelTitle: "링크 하나로 어디서든 예약 접수",
+    desc: "정리하개에서 생성한 예약 링크를 네이버 플레이스, 카카오맵, 인스타그램 바이오 등 어디든 붙여넣으면 바로 예약 접수가 가능해요.",
+    tags: ["링크 1개로 통합 접수", "네이버·카카오 연동", "인스타 바이오 활용", "QR코드 생성"],
+  },
+] as const;
+
+function FeatureSection() {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+
+  const activeId = pinnedId ?? hoveredId;
+  const active = FEATURES.find((f) => f.id === activeId) ?? null;
+
+  const handleClick = (id: string) => {
+    setPinnedId((prev) => (prev === id ? null : id));
+  };
+
+  return (
+    <section id="features" className="py-16 md:py-24 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+            미용샵 운영에 필요한 건 다 있어요
+          </h2>
+          <p className="text-gray-500">복잡한 교육 없이 오늘부터 바로 쓸 수 있어요</p>
+        </div>
+
+        {/* Card grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          {FEATURES.map((f) => {
+            const isActive = activeId === f.id;
+            const isPinned = pinnedId === f.id;
+            return (
+              <div
+                key={f.id}
+                onMouseEnter={() => setHoveredId(f.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => handleClick(f.id)}
+                className="bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
+                style={{
+                  borderColor: isActive ? f.color : "#f3f4f6",
+                  transform: isActive ? "translateY(-3px)" : "none",
+                  boxShadow: isActive
+                    ? `0 8px 24px -4px ${f.color}28`
+                    : "0 1px 3px 0 rgb(0 0 0 / 0.05)",
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200"
+                  style={{
+                    backgroundColor: f.pastel,
+                    color: f.color,
+                    transform: isActive ? "scale(1.1)" : "scale(1)",
+                  }}
+                >
+                  {f.icon}
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-bold text-gray-900">{f.title}</h3>
+                  {isPinned && (
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ backgroundColor: f.pastel, color: f.color }}
+                    >
+                      고정됨
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {f.desc}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Detail panel */}
+        <div
+          className="overflow-hidden transition-all duration-300"
+          style={{ maxHeight: active ? "400px" : "0px", opacity: active ? 1 : 0 }}
+        >
+          {active && (
+            <div
+              className="mt-5 rounded-2xl border p-6 md:p-8"
+              style={{
+                borderColor: active.color,
+                backgroundColor: active.pastel,
+              }}
+            >
+              <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
+                {/* Left: text */}
+                <div className="flex-1 min-w-0">
+                  <span
+                    className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-3"
+                    style={{ backgroundColor: `${active.color}18`, color: active.color }}
+                  >
+                    {active.title}
+                  </span>
+                  <h3
+                    className="text-base md:text-lg font-bold mb-3"
+                    style={{ color: active.color }}
+                  >
+                    {active.panelTitle}
+                  </h3>
+                  <p className="text-sm text-gray-600 leading-relaxed mb-4" style={{ wordBreak: "keep-all" }}>
+                    {active.desc}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {active.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs px-2.5 py-1 rounded-full font-medium border"
+                        style={{
+                          backgroundColor: "white",
+                          color: active.color,
+                          borderColor: `${active.color}30`,
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: icon block */}
+                <div
+                  className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center shadow-sm"
+                  style={{ backgroundColor: "white", color: active.color }}
+                >
+                  {active.bigIcon}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function Home() {
   const { user } = useAuth();
@@ -310,39 +515,6 @@ export default function Home() {
     { id: "dashboard", label: "매출 대시보드" },
     { id: "customers", label: "고객 관리" },
     { id: "calendar", label: "예약 캘린더" },
-  ];
-
-  const features = [
-    {
-      icon: <CalendarDays className="w-6 h-6 text-primary" />,
-      title: "예약 캘린더",
-      desc: "일/주/월 뷰로 한눈에. 예약 링크로 온라인 접수도 받을 수 있어요.",
-    },
-    {
-      icon: <Users className="w-6 h-6 text-primary" />,
-      title: "고객 관리",
-      desc: "VIP, 미방문 고객을 자동으로 분류. 강아지 정보와 방문 이력을 한곳에.",
-    },
-    {
-      icon: <BarChart3 className="w-6 h-6 text-primary" />,
-      title: "매출 대시보드",
-      desc: "단순 숫자가 아닌 인사이트. 어떤 고객을 잡아야 하는지 알려드려요.",
-    },
-    {
-      icon: <MessageSquare className="w-6 h-6 text-primary" />,
-      title: "카카오 알림톡",
-      desc: "예약 확인, 리마인더, 예약금 안내까지 자동 발송.",
-    },
-    {
-      icon: <Scissors className="w-6 h-6 text-primary" />,
-      title: "서비스 관리",
-      desc: "전체미용, 부분미용, 목욕 등 메뉴별 가격과 소요 시간 설정.",
-    },
-    {
-      icon: <Link2 className="w-6 h-6 text-primary" />,
-      title: "예약 링크",
-      desc: "네이버 플레이스, 카카오맵 등 어디든 링크만 달면 바로 예약 접수.",
-    },
   ];
 
   return (
@@ -659,30 +831,7 @@ export default function Home() {
       </section>
 
       {/* ── 6. Feature Cards ───────────────────────────────────── */}
-      <section id="features" className="py-16 md:py-24 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-              미용샵 운영에 필요한 건 다 있어요
-            </h2>
-            <p className="text-gray-500">복잡한 교육 없이 오늘부터 바로 쓸 수 있어요</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  {f.icon}
-                </div>
-                <h3 className="font-bold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeatureSection />
 
       {/* ── 7. Bottom CTA ──────────────────────────────────────── */}
       <section className="py-16 md:py-24 px-4 bg-primary">
