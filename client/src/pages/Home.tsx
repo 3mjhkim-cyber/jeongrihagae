@@ -604,7 +604,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 3. Product Showcase ────────────────────────────────── */}
+      {/* ── 3. Feature Cards ───────────────────────────────────── */}
+      <FeatureSection />
+
+      {/* ── 4. Product Showcase ────────────────────────────────── */}
       <section className="py-16 md:py-24 bg-gray-50 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
@@ -829,9 +832,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ── 6. Feature Cards ───────────────────────────────────── */}
-      <FeatureSection />
 
       {/* ── 7. Bottom CTA ──────────────────────────────────────── */}
       <section className="py-16 md:py-24 px-4 bg-primary">
