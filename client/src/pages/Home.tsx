@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -360,6 +360,270 @@ const FEATURES = [
   },
 ] as const;
 
+// ─── Hero Slideshow ─────────────────────────────────────────────────────────
+const HERO_IMAGES = [
+  "/images/hero-dog1.jpg",
+  "/images/hero-dog2.jpg",
+  "/images/hero-dog3.jpg",
+  "/images/hero-dog4.jpg",
+];
+
+function HeroSection() {
+  const { user } = useAuth();
+  const [activeIdx, setActiveIdx] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setActiveIdx((i) => (i + 1) % HERO_IMAGES.length);
+    }, 4000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  return (
+    <section
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        backgroundColor: "#FEFAF5",
+        minHeight: "calc(100vh - 64px)",
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
+      {/* ── 슬라이드쇼 이미지 (데스크톱: 오른쪽 55%) ── */}
+      <div
+        className="hero-slideshow-wrap"
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          width: "55%",
+          height: "100%",
+          zIndex: 0,
+        }}
+      >
+        {HERO_IMAGES.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              opacity: i === activeIdx ? 1 : 0,
+              transition: "opacity 1.5s ease-in-out",
+              filter: "brightness(0.92) saturate(0.85) sepia(0.08)",
+            }}
+          />
+        ))}
+        {/* 왼쪽 페이드 그라디언트 */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            background:
+              "linear-gradient(to right, #FEFAF5 38%, rgba(254,250,245,0.92) 52%, rgba(254,250,245,0.15) 100%)",
+          }}
+        />
+      </div>
+
+      {/* 모바일: 하단 이미지 오버레이 */}
+      <div
+        className="hero-mobile-img"
+        style={{ display: "none" }}
+      >
+        {HERO_IMAGES.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              opacity: i === activeIdx ? 1 : 0,
+              transition: "opacity 1.5s ease-in-out",
+              filter: "brightness(0.92) saturate(0.85) sepia(0.08)",
+            }}
+          />
+        ))}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(254,250,245,0.88)",
+            zIndex: 1,
+          }}
+        />
+      </div>
+
+      {/* ── 왼쪽 텍스트 콘텐츠 ── */}
+      <div
+        className="hero-content"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          flex: 1,
+          paddingLeft: "80px",
+          paddingRight: "40px",
+          paddingTop: "80px",
+          paddingBottom: "80px",
+          maxWidth: "52%",
+        }}
+      >
+        {/* 배지 */}
+        <span
+          style={{
+            display: "inline-block",
+            padding: "4px 12px",
+            borderRadius: "9999px",
+            backgroundColor: "rgba(59,91,219,0.08)",
+            color: "#3B5BDB",
+            fontWeight: 600,
+            fontSize: "11px",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            marginBottom: "20px",
+            border: "1px solid rgba(59,91,219,0.15)",
+          }}
+        >
+          반려동물 미용샵 토탈 솔루션
+        </span>
+
+        {/* 브랜드명 */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+          <div
+            style={{
+              backgroundColor: "#3B5BDB",
+              padding: "10px",
+              borderRadius: "16px",
+              boxShadow: "0 8px 24px rgba(59,91,219,0.3)",
+              flexShrink: 0,
+            }}
+          >
+            <Scissors style={{ width: "32px", height: "32px", color: "white" }} />
+          </div>
+          <span
+            style={{
+              fontSize: "clamp(2.5rem, 5vw, 4rem)",
+              fontWeight: 900,
+              color: "#3B5BDB",
+              letterSpacing: "-0.035em",
+              fontFamily: "'Stylish', sans-serif",
+            }}
+          >
+            정리하개
+          </span>
+        </div>
+
+        {/* 헤드라인 */}
+        <h1
+          style={{
+            fontSize: "clamp(1.75rem, 3vw, 2.75rem)",
+            fontWeight: 700,
+            color: "#1e293b",
+            lineHeight: 1.35,
+            wordBreak: "keep-all",
+            marginBottom: "24px",
+          }}
+        >
+          미용샵 운영,
+          <br />
+          <span style={{ color: "#3B5BDB", position: "relative", display: "inline-block" }}>
+            이제 제대로 정리하세요
+            <svg
+              style={{ position: "absolute", bottom: "-6px", left: 0, width: "100%", height: "10px", color: "rgba(59,91,219,0.3)" }}
+              viewBox="0 0 100 10"
+              preserveAspectRatio="none"
+            >
+              <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
+            </svg>
+          </span>
+        </h1>
+
+        {/* 서브타이틀 */}
+        <p
+          style={{
+            fontSize: "clamp(0.95rem, 1.2vw, 1.1rem)",
+            color: "#64748b",
+            lineHeight: 1.9,
+            wordBreak: "keep-all",
+            marginBottom: "36px",
+          }}
+        >
+          예약 접수부터 승인, 예약금 관리, 고객 관리까지
+          <br />
+          미용샵 운영에 필요한 모든 기능을 하나로
+        </p>
+
+        {/* CTA */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" }}>
+          <Link href="/login">
+            <button
+              style={{
+                padding: "16px 40px",
+                backgroundColor: "#3B5BDB",
+                color: "white",
+                borderRadius: "16px",
+                fontSize: "1.1rem",
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(59,91,219,0.3)",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.backgroundColor = "#3451c7"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.backgroundColor = "#3B5BDB"; }}
+            >
+              <LogIn style={{ width: "20px", height: "20px" }} />
+              지금 시작하기
+            </button>
+          </Link>
+          <p style={{ fontSize: "12px", color: "#94a3b8" }}>30일 무료체험 · 체험 후 카드 등록으로 계속 이용 가능</p>
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .hero-slideshow-wrap { display: none !important; }
+          .hero-mobile-img {
+            display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            height: 220px !important;
+            overflow: hidden;
+            order: 2;
+          }
+          .hero-content {
+            max-width: 100% !important;
+            padding: 48px 20px 32px !important;
+            text-align: center !important;
+            align-items: center !important;
+          }
+          .hero-content > div:last-child {
+            align-items: center !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .hero-mobile-img { display: none !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
 function FeatureSection() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
@@ -538,71 +802,7 @@ export default function Home() {
       </nav>}
 
       {/* ── 2. Hero ────────────────────────────────────────────── */}
-      <section className="relative pt-16 pb-24 md:pt-24 md:pb-40 px-4 overflow-hidden">
-        {/* Decorative blur orbs */}
-        <div className="absolute top-1/2 left-10 w-72 h-72 bg-primary/8 rounded-full blur-3xl -z-10 animate-pulse" />
-        <div className="absolute top-20 right-10 w-80 h-80 bg-blue-400/8 rounded-full blur-3xl -z-10 animate-pulse delay-700" />
-
-        <div className="container mx-auto max-w-4xl text-center relative z-10">
-          {/* 배지 */}
-          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold text-[11px] tracking-[0.14em] uppercase mb-5 md:mb-6 border border-primary/15">
-            반려동물 미용샵 토탈 솔루션
-          </span>
-
-          {/* 브랜드명 */}
-          <div className="flex items-center justify-center gap-2.5 md:gap-3 mb-6 md:mb-8">
-            <div className="bg-primary p-2 md:p-2.5 rounded-xl md:rounded-2xl shadow-lg shadow-primary/30 flex-shrink-0">
-              <Scissors className="w-6 h-6 md:w-8 md:h-8 text-white" />
-            </div>
-            <span
-              className="text-4xl sm:text-5xl md:text-7xl font-black text-primary"
-              style={{ letterSpacing: "-0.035em" }}
-            >
-              정리하개
-            </span>
-          </div>
-
-          {/* 헤드라인 */}
-          <h1
-            className="text-[1.85rem] sm:text-4xl md:text-[3.25rem] font-bold text-foreground mb-6 md:mb-8"
-            style={{ lineHeight: 1.35, wordBreak: "keep-all" }}
-          >
-            미용샵 운영,
-            <br />
-            <span className="text-primary relative inline-block">
-              이제 제대로 정리하세요
-              <svg
-                className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
-                viewBox="0 0 100 10"
-                preserveAspectRatio="none"
-              >
-                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
-              </svg>
-            </span>
-          </h1>
-
-          {/* 서브타이틀 */}
-          <p
-            className="text-base md:text-lg text-muted-foreground mb-9 md:mb-11 max-w-md mx-auto"
-            style={{ lineHeight: 1.9, wordBreak: "keep-all" }}
-          >
-            예약 접수부터 승인, 예약금 관리, 고객 관리까지
-            <br className="hidden sm:block" />
-            {" "}미용샵 운영에 필요한 모든 기능을 하나로
-          </p>
-
-          {/* CTA */}
-          <div className="flex flex-col items-center gap-3">
-            <Link href="/login" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto px-10 py-4 md:px-12 md:py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl text-lg md:text-xl font-bold shadow-2xl shadow-primary/30 hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-2.5">
-                <LogIn className="w-5 h-5 md:w-6 md:h-6" />
-                지금 시작하기
-              </button>
-            </Link>
-            <p className="text-xs text-muted-foreground">30일 무료체험 · 체험 후 카드 등록으로 계속 이용 가능</p>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* ── 3. Feature Cards ───────────────────────────────────── */}
       <FeatureSection />
