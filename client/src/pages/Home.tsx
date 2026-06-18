@@ -391,19 +391,18 @@ function HeroSection() {
       setRevealed(FULL.length); setShowCursor(false); return;
     }
     const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
-    let count = 0;
-    const startTimer = setTimeout(() => {
-      const charTimer = setInterval(() => {
-        count++;
-        setRevealed(count);
-        if (count >= FULL.length) {
-          clearInterval(charTimer);
-          setTimeout(() => { setShowCursor(false); clearInterval(cursorTimer); }, 3500);
-        }
-      }, 420);
-    }, 600);
-    return () => { clearTimeout(startTimer); clearInterval(cursorTimer); };
+    return () => clearInterval(cursorTimer);
   }, []);
+
+  useEffect(() => {
+    if (revealed >= FULL.length) {
+      const t = setTimeout(() => setShowCursor(false), 3500);
+      return () => clearTimeout(t);
+    }
+    const delay = revealed === 0 ? 800 : 420;
+    const t = setTimeout(() => setRevealed(r => r + 1), delay);
+    return () => clearTimeout(t);
+  }, [revealed]);
 
   return (
     <section className="hs-section">
