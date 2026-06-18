@@ -488,22 +488,24 @@
   to   { transform: translate(-50%, -50%) scale(4); opacity: 0; }
 }
 
-.typing-text {
-  display: inline-block;
-  white-space: nowrap;
-  border-right: 2px solid #3B5BDB;
-  vertical-align: bottom;
-  animation:
-    typeOn 3.2s steps(11, end) 0.5s both,
-    blink  1s   step-end      0.5s 4;
-}
+@layer utilities {
+  .typing-text {
+    display: inline-block;
+    white-space: nowrap;
+    border-right: 2px solid #3B5BDB;
+    vertical-align: bottom;
+    animation:
+      typeOn 3.2s steps(11, end) 0.5s both,
+      blink  1s   step-end      0.5s 4;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .typing-text { animation: none; border-right: none; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  @media (prefers-reduced-motion: reduce) {
+    .typing-text { animation: none; border-right: none; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
