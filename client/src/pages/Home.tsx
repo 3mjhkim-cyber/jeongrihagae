@@ -388,7 +388,7 @@ const TypingText = memo(function TypingText({ full }: { full: string }) {
         clearInterval(cursorTimer);
         setTimeout(() => setShowCursor(false), 3500);
       } else {
-        setTimeout(tick, 260);
+        setTimeout(tick, 150);
       }
     };
     const start = setTimeout(tick, 800);
