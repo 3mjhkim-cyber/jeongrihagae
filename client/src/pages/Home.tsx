@@ -373,11 +373,36 @@ function HeroSection() {
   const [activeIdx, setActiveIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // 타이핑 효과
+  const FULL = "이제 제대로 정리하세요";
+  const [revealed, setRevealed] = useState(0);
+  const [cursorOn, setCursorOn] = useState(true);
+  const [showCursor, setShowCursor] = useState(true);
+
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setActiveIdx((i) => (i + 1) % HERO_IMAGES.length);
     }, 4000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setRevealed(FULL.length); setShowCursor(false); return;
+    }
+    const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
+    let count = 0;
+    const startTimer = setTimeout(() => {
+      const charTimer = setInterval(() => {
+        count++;
+        setRevealed(count);
+        if (count >= FULL.length) {
+          clearInterval(charTimer);
+          setTimeout(() => { setShowCursor(false); clearInterval(cursorTimer); }, 3500);
+        }
+      }, 280);
+    }, 600);
+    return () => { clearTimeout(startTimer); clearInterval(cursorTimer); };
   }, []);
 
   return (
@@ -408,7 +433,13 @@ function HeroSection() {
 
         <h1 className="hs-heading">
           미용샵 운영,<br />
-          <span className="hs-heading-accent">
+          <span className="hs-heading-accent" style={{
+            clipPath: revealed < FULL.length
+              ? `inset(0 ${((FULL.length - revealed) / FULL.length * 100).toFixed(1)}% 0 0)`
+              : "none",
+            borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
+            paddingRight: showCursor ? "2px" : "0",
+          }}>
             이제 제대로 정리하세요
             <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
               <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
