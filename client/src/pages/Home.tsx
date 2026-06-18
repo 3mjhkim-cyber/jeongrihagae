@@ -381,242 +381,248 @@ function HeroSection() {
   }, []);
 
   return (
-    <section
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        backgroundColor: "#FEFAF5",
-        minHeight: "calc(100vh - 64px)",
-        display: "flex",
-        alignItems: "center",
-      }}
-    >
-      {/* ── 슬라이드쇼 이미지 (데스크톱: 오른쪽 55%) ── */}
-      <div
-        className="hero-slideshow-wrap"
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          width: "55%",
-          height: "100%",
-          zIndex: 0,
-        }}
-      >
+    <section className="hs-section">
+      {/* ── 데스크톱 슬라이드쇼 (오른쪽) ── */}
+      <div className="hs-img-wrap">
         {HERO_IMAGES.map((src, i) => (
           <img
             key={src}
             src={src}
             alt=""
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center",
-              opacity: i === activeIdx ? 1 : 0,
-              transition: "opacity 1.5s ease-in-out",
-              filter: "brightness(0.92) saturate(0.85) sepia(0.08)",
-            }}
+            className={`hs-img${i === activeIdx ? " hs-img-active" : ""}`}
           />
         ))}
-        {/* 왼쪽 페이드 그라디언트 */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 1,
-            background:
-              "linear-gradient(to right, #FEFAF5 10%, rgba(254,250,245,0.85) 25%, rgba(254,250,245,0.5) 40%, rgba(254,250,245,0.15) 58%, rgba(254,250,245,0) 72%)",
-          }}
-        />
+        <div className="hs-gradient" />
       </div>
 
-      {/* 모바일: 하단 이미지 오버레이 */}
-      <div
-        className="hero-mobile-img"
-        style={{ display: "none" }}
-      >
-        {HERO_IMAGES.map((src, i) => (
-          <img
-            key={src}
-            src={src}
-            alt=""
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center",
-              opacity: i === activeIdx ? 1 : 0,
-              transition: "opacity 1.5s ease-in-out",
-              filter: "brightness(0.92) saturate(0.85) sepia(0.08)",
-            }}
-          />
-        ))}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(254,250,245,0.88)",
-            zIndex: 1,
-          }}
-        />
-      </div>
+      {/* ── 텍스트 콘텐츠 ── */}
+      <div className="hs-content">
+        <span className="hs-badge">반려동물 미용샵 토탈 솔루션</span>
 
-      {/* ── 왼쪽 텍스트 콘텐츠 ── */}
-      <div className="hero-content">
-        {/* 배지 */}
-        <span
-          style={{
-            display: "inline-block",
-            padding: "4px 12px",
-            borderRadius: "9999px",
-            backgroundColor: "rgba(59,91,219,0.08)",
-            color: "#3B5BDB",
-            fontWeight: 600,
-            fontSize: "11px",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            marginBottom: "20px",
-            border: "1px solid rgba(59,91,219,0.15)",
-          }}
-        >
-          반려동물 미용샵 토탈 솔루션
-        </span>
-
-        {/* 브랜드명 */}
-        <div className="hero-brand" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
-          <div
-            style={{
-              backgroundColor: "#3B5BDB",
-              padding: "10px",
-              borderRadius: "16px",
-              boxShadow: "0 8px 24px rgba(59,91,219,0.3)",
-              flexShrink: 0,
-            }}
-          >
-            <Scissors style={{ width: "32px", height: "32px", color: "white" }} />
+        <div className="hs-brand">
+          <div className="hs-brand-icon">
+            <Scissors style={{ width: "28px", height: "28px", color: "white" }} />
           </div>
-          <span
-            style={{
-              fontSize: "clamp(2.5rem, 5vw, 4rem)",
-              fontWeight: 900,
-              color: "#3B5BDB",
-              letterSpacing: "-0.035em",
-              fontFamily: "'Stylish', sans-serif",
-            }}
-          >
-            정리하개
-          </span>
+          <span className="hs-brand-name">정리하개</span>
         </div>
 
-        {/* 헤드라인 */}
-        <h1
-          style={{
-            fontSize: "clamp(1.75rem, 3vw, 2.75rem)",
-            fontWeight: 700,
-            color: "#1e293b",
-            lineHeight: 1.35,
-            wordBreak: "keep-all",
-            marginBottom: "24px",
-          }}
-        >
-          미용샵 운영,
-          <br />
-          <span style={{ color: "#3B5BDB", position: "relative", display: "inline-block" }}>
+        <h1 className="hs-heading">
+          미용샵 운영,<br />
+          <span className="hs-heading-accent">
             이제 제대로 정리하세요
-            <svg
-              style={{ position: "absolute", bottom: "-6px", left: 0, width: "100%", height: "10px", color: "rgba(59,91,219,0.3)" }}
-              viewBox="0 0 100 10"
-              preserveAspectRatio="none"
-            >
+            <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
               <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
             </svg>
           </span>
         </h1>
 
-        {/* 서브타이틀 */}
-        <p
-          style={{
-            fontSize: "clamp(0.95rem, 1.2vw, 1.1rem)",
-            color: "#64748b",
-            lineHeight: 1.9,
-            wordBreak: "keep-all",
-            marginBottom: "36px",
-          }}
-        >
-          예약 접수부터 승인, 예약금 관리, 고객 관리까지
-          <br />
+        <p className="hs-sub">
+          예약 접수부터 승인, 예약금 관리, 고객 관리까지<br />
           미용샵 운영에 필요한 모든 기능을 하나로
         </p>
 
-        {/* CTA */}
-        <div className="hero-content-cta" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" }}>
+        <div className="hs-cta">
           <Link href="/login">
-            <button
-              style={{
-                padding: "16px 40px",
-                backgroundColor: "#3B5BDB",
-                color: "white",
-                borderRadius: "16px",
-                fontSize: "1.1rem",
-                fontWeight: 700,
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(59,91,219,0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                transition: "all 0.2s",
-              }}
+            <button className="hs-btn"
               onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.backgroundColor = "#3451c7"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.backgroundColor = "#3B5BDB"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.backgroundColor = ""; }}
             >
               <LogIn style={{ width: "20px", height: "20px" }} />
               지금 시작하기
             </button>
           </Link>
-          <p style={{ fontSize: "12px", color: "#94a3b8" }}>30일 무료체험 · 체험 후 카드 등록으로 계속 이용 가능</p>
+          <p className="hs-notice">30일 무료체험 · 체험 후 카드 등록으로 계속 이용 가능</p>
         </div>
       </div>
 
+      {/* ── 모바일 슬라이드쇼 (하단) ── */}
+      <div className="hs-mobile-img">
+        {HERO_IMAGES.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className={`hs-img${i === activeIdx ? " hs-img-active" : ""}`}
+          />
+        ))}
+        <div className="hs-mobile-overlay" />
+      </div>
+
       <style>{`
-        .hero-content {
+        .hs-section {
+          position: relative;
+          overflow: hidden;
+          background: #FEFAF5;
+          min-height: calc(100vh - 64px);
+          display: flex;
+          align-items: center;
+        }
+
+        /* ── 데스크톱 이미지 ── */
+        .hs-img-wrap {
+          position: absolute;
+          right: 0; top: 0;
+          width: 58%;
+          height: 100%;
+          z-index: 0;
+        }
+        .hs-img {
+          position: absolute;
+          inset: 0;
+          width: 100%; height: 100%;
+          object-fit: cover;
+          object-position: center 25%;
+          opacity: 0;
+          transition: opacity 1.5s ease-in-out;
+          filter: brightness(0.93) saturate(0.88) sepia(0.06);
+        }
+        .hs-img-active { opacity: 1; }
+        .hs-gradient {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          background: linear-gradient(
+            to right,
+            #FEFAF5 0%,
+            rgba(254,250,245,0.92) 12%,
+            rgba(254,250,245,0.6) 24%,
+            rgba(254,250,245,0.2) 40%,
+            rgba(254,250,245,0) 60%
+          );
+        }
+
+        /* ── 텍스트 영역 ── */
+        .hs-content {
           position: relative;
           z-index: 2;
           flex: 1;
-          padding: 80px 40px 80px 80px;
-          max-width: 52%;
+          max-width: 48%;
+          padding: 80px 32px 80px 80px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
         }
+        .hs-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 9999px;
+          background: rgba(59,91,219,0.08);
+          color: #3B5BDB;
+          font-weight: 600;
+          font-size: 11px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          margin-bottom: 20px;
+          border: 1px solid rgba(59,91,219,0.15);
+        }
+        .hs-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+        .hs-brand-icon {
+          background: #3B5BDB;
+          padding: 10px;
+          border-radius: 16px;
+          box-shadow: 0 8px 24px rgba(59,91,219,0.3);
+          flex-shrink: 0;
+        }
+        .hs-brand-name {
+          font-size: clamp(2.2rem, 4vw, 3.5rem);
+          font-weight: 900;
+          color: #3B5BDB;
+          letter-spacing: -0.035em;
+          font-family: 'Stylish', sans-serif;
+        }
+        .hs-heading {
+          font-size: clamp(1.6rem, 2.8vw, 2.5rem);
+          font-weight: 700;
+          color: #1e293b;
+          line-height: 1.35;
+          word-break: keep-all;
+          margin-bottom: 24px;
+        }
+        .hs-heading-accent {
+          color: #3B5BDB;
+          position: relative;
+          display: inline-block;
+        }
+        .hs-underline {
+          position: absolute;
+          bottom: -6px; left: 0;
+          width: 100%; height: 10px;
+          color: rgba(59,91,219,0.3);
+        }
+        .hs-sub {
+          font-size: clamp(0.9rem, 1.1vw, 1rem);
+          color: #64748b;
+          line-height: 1.9;
+          word-break: keep-all;
+          margin-bottom: 36px;
+        }
+        .hs-cta {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .hs-btn {
+          padding: 14px 36px;
+          background: #3B5BDB;
+          color: white;
+          border-radius: 14px;
+          font-size: 1.05rem;
+          font-weight: 700;
+          border: none;
+          cursor: pointer;
+          box-shadow: 0 8px 24px rgba(59,91,219,0.3);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s;
+        }
+        .hs-notice {
+          font-size: 12px;
+          color: #94a3b8;
+          margin: 0;
+        }
+
+        /* ── 모바일 ── */
+        .hs-mobile-img { display: none; }
+
         @media (max-width: 768px) {
-          .hero-slideshow-wrap { display: none !important; }
-          .hero-mobile-img {
-            display: block !important;
-            position: relative !important;
-            width: 100% !important;
-            height: 220px !important;
+          .hs-section {
+            flex-direction: column;
+            align-items: stretch;
+            min-height: auto;
+          }
+          .hs-img-wrap { display: none; }
+          .hs-content {
+            max-width: 100%;
+            padding: 48px 24px 28px;
+            align-items: center;
+            text-align: center;
+          }
+          .hs-brand { justify-content: center; }
+          .hs-cta { align-items: center; }
+          .hs-mobile-img {
+            display: block;
+            position: relative;
+            width: 100%;
+            height: 260px;
             overflow: hidden;
+            flex-shrink: 0;
           }
-          .hero-content {
-            max-width: 100% !important;
-            padding: 48px 20px 32px !important;
-            text-align: center !important;
+          .hs-mobile-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(254,250,245,0.25);
+            z-index: 1;
           }
-          .hero-content-cta {
-            justify-content: center !important;
+          .hs-img {
+            object-position: center 20%;
           }
-          .hero-badge {
-            display: inline-block;
-          }
-          .hero-brand {
-            justify-content: center !important;
-          }
-        }
-        @media (min-width: 769px) {
-          .hero-mobile-img { display: none !important; }
         }
       `}</style>
     </section>
