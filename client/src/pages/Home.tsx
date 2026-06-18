@@ -467,19 +467,7 @@ function HeroSection() {
       </div>
 
       {/* ── 왼쪽 텍스트 콘텐츠 ── */}
-      <div
-        className="hero-content"
-        style={{
-          position: "relative",
-          zIndex: 2,
-          flex: 1,
-          paddingLeft: "80px",
-          paddingRight: "40px",
-          paddingTop: "80px",
-          paddingBottom: "80px",
-          maxWidth: "52%",
-        }}
-      >
+      <div className="hero-content">
         {/* 배지 */}
         <span
           style={{
@@ -500,7 +488,7 @@ function HeroSection() {
         </span>
 
         {/* 브랜드명 */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+        <div className="hero-brand" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
           <div
             style={{
               backgroundColor: "#3B5BDB",
@@ -566,7 +554,7 @@ function HeroSection() {
         </p>
 
         {/* CTA */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" }}>
+        <div className="hero-content-cta" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" }}>
           <Link href="/login">
             <button
               style={{
@@ -596,6 +584,13 @@ function HeroSection() {
       </div>
 
       <style>{`
+        .hero-content {
+          position: relative;
+          z-index: 2;
+          flex: 1;
+          padding: 80px 40px 80px 80px;
+          max-width: 52%;
+        }
         @media (max-width: 768px) {
           .hero-slideshow-wrap { display: none !important; }
           .hero-mobile-img {
@@ -604,16 +599,20 @@ function HeroSection() {
             width: 100% !important;
             height: 220px !important;
             overflow: hidden;
-            order: 2;
           }
           .hero-content {
             max-width: 100% !important;
             padding: 48px 20px 32px !important;
             text-align: center !important;
-            align-items: center !important;
           }
-          .hero-content > div:last-child {
-            align-items: center !important;
+          .hero-content-cta {
+            justify-content: center !important;
+          }
+          .hero-badge {
+            display: inline-block;
+          }
+          .hero-brand {
+            justify-content: center !important;
           }
         }
         @media (min-width: 769px) {
