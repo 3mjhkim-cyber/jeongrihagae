@@ -362,10 +362,10 @@ const FEATURES = [
 
 // ─── Hero Slideshow ─────────────────────────────────────────────────────────
 const HERO_IMAGES = [
-  "/images/hero-dog1.jpg",
-  "/images/hero-dog2.jpg",
-  "/images/hero-dog3.jpg",
-  "/images/hero-dog4.jpg",
+  "/hero-dog1.jpg",
+  "/hero-dog2.jpg",
+  "/hero-dog3.jpg",
+  "/hero-dog4.jpg",
 ];
 
 function HeroSection() {
