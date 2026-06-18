@@ -369,21 +369,25 @@ const HERO_IMAGES = [
 ];
 
 // React.memo로 감싸면 props가 바뀌지 않는 한 절대 re-render 안 됨
-const TypingText = memo(function TypingText({ full }: { full: string }) {
-  const [revealed, setRevealed] = useState(0);
+const TypingHeading = memo(function TypingHeading() {
+  const LINE1 = "미용샵 운영,";
+  const LINE2 = "이제 제대로 정리하세요";
+  const TOTAL = LINE1.length + LINE2.length;
+
+  const [count, setCount] = useState(0);
   const [cursorOn, setCursorOn] = useState(true);
   const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
-    let count = 0;
+    let c = 0;
     let done = false;
     const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
 
     const tick = () => {
       if (done) return;
-      count++;
-      setRevealed(count);
-      if (count >= full.length) {
+      c++;
+      setCount(c);
+      if (c >= TOTAL) {
         done = true;
         clearInterval(cursorTimer);
         setTimeout(() => setShowCursor(false), 3500);
@@ -391,26 +395,37 @@ const TypingText = memo(function TypingText({ full }: { full: string }) {
         setTimeout(tick, 150);
       }
     };
-    const start = setTimeout(tick, 800);
-
+    const start = setTimeout(tick, 600);
     return () => { done = true; clearTimeout(start); clearInterval(cursorTimer); };
   }, []);
 
+  const line1 = LINE1.slice(0, Math.min(count, LINE1.length));
+  const line2 = LINE2.slice(0, Math.max(0, count - LINE1.length));
+  const onLine1 = count <= LINE1.length;
+  const cursor = showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none";
+
   return (
-    <span style={{
-      borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
-      paddingRight: "2px",
-    }}>
-      {full.slice(0, revealed)}
-    </span>
+    <h1 className="hs-heading">
+      <span style={{ borderRight: onLine1 ? cursor : "none", paddingRight: "2px" }}>
+        {line1}
+      </span>
+      {count > LINE1.length && <><br />
+        <span className="hs-heading-accent">
+          <span style={{ borderRight: !onLine1 ? cursor : "none", paddingRight: "2px" }}>
+            {line2}
+          </span>
+          <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
+            <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
+          </svg>
+        </span>
+      </>}
+    </h1>
   );
 });
 
 function HeroSection() {
   const [activeIdx, setActiveIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const FULL = "이제 제대로 정리하세요";
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -445,15 +460,7 @@ function HeroSection() {
           <span className="hs-brand-name">정리하개</span>
         </div>
 
-        <h1 className="hs-heading">
-          미용샵 운영,<br />
-          <span className="hs-heading-accent">
-            <TypingText full={FULL} />
-            <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
-              <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
-            </svg>
-          </span>
-        </h1>
+        <TypingHeading />
 
         <p className="hs-sub">
           예약 접수부터 승인, 예약금 관리, 고객 관리까지<br />
