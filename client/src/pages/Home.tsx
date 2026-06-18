@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -368,49 +368,58 @@ const HERO_IMAGES = [
   "/hero-dog4.jpg",
 ];
 
-function HeroSection() {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // 타이핑 효과
-  const FULL = "이제 제대로 정리하세요";
+// React.memo로 감싸면 props가 바뀌지 않는 한 절대 re-render 안 됨
+const TypingText = memo(function TypingText({ full }: { full: string }) {
   const [revealed, setRevealed] = useState(0);
   const [cursorOn, setCursorOn] = useState(true);
   const [showCursor, setShowCursor] = useState(true);
-  const revealedRef = useRef(0);
-  const doneRef = useRef(false);
-
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setActiveIdx((i) => (i + 1) % HERO_IMAGES.length);
-    }, 4000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setRevealed(FULL.length); setShowCursor(false); return;
+      setRevealed(full.length); setShowCursor(false); return;
     }
+    let count = 0;
+    let done = false;
     const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
 
     const tick = () => {
-      if (doneRef.current) return;
-      revealedRef.current += 1;
-      setRevealed(revealedRef.current);
-      if (revealedRef.current >= FULL.length) {
-        doneRef.current = true;
+      if (done) return;
+      count++;
+      setRevealed(count);
+      if (count >= full.length) {
+        done = true;
         clearInterval(cursorTimer);
         setTimeout(() => setShowCursor(false), 3500);
       } else {
         setTimeout(tick, 420);
       }
     };
+    const start = setTimeout(tick, 800);
 
-    const startTimer = setTimeout(tick, 800);
-    return () => {
-      clearTimeout(startTimer);
-      clearInterval(cursorTimer);
-    };
+    return () => { done = true; clearTimeout(start); clearInterval(cursorTimer); };
+  }, []);
+
+  return (
+    <span style={{
+      borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
+      paddingRight: "2px",
+    }}>
+      {full.slice(0, revealed)}
+    </span>
+  );
+});
+
+function HeroSection() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const FULL = "이제 제대로 정리하세요";
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setActiveIdx((i) => (i + 1) % HERO_IMAGES.length);
+    }, 4000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
   return (
@@ -441,11 +450,8 @@ function HeroSection() {
 
         <h1 className="hs-heading">
           미용샵 운영,<br />
-          <span className="hs-heading-accent" style={{
-            borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
-            paddingRight: "2px",
-          }}>
-            {FULL.slice(0, revealed)}
+          <span className="hs-heading-accent">
+            <TypingText full={FULL} />
             <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
               <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
             </svg>
