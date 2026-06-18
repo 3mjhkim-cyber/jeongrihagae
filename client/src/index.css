@@ -474,28 +474,6 @@
   }
 }
 
-/* ── 인터랙션 애니메이션 ────────────────────────────────── */
-@keyframes typeOn {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0% 0 0); }
-}
-@keyframes blink {
-  0%, 100% { border-color: #3B5BDB; }
-  50%       { border-color: transparent; }
-}
-@keyframes ripple {
-  from { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
-  to   { transform: translate(-50%, -50%) scale(4); opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

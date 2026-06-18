@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -17,71 +16,6 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 type Tab = "dashboard" | "customers" | "calendar";
-
-// ─── CountUpAmount ───────────────────────────────────────────────────────────
-function CountUpAmount({ value, className }: { value: number; className?: string }) {
-  const [display, setDisplay] = useState(value); // 초기값 = 실제값 (0원으로 시작 안함)
-  const triggered = useRef(false);
-  const rafRef = useRef(0);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  // 슬라이더 조작 시 카운트업 이후엔 즉시 반영
-  useEffect(() => {
-    if (triggered.current) setDisplay(value);
-  }, [value]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      triggered.current = true;
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || triggered.current) return;
-      triggered.current = true;
-      observer.disconnect();
-      const target = value;
-      const duration = 1200;
-      const start = performance.now();
-      function tick(now: number) {
-        const p = Math.min((now - start) / duration, 1);
-        const ease = 1 - (1 - p) ** 3; // easeOutCubic
-        setDisplay(Math.round(ease * target));
-        if (p < 1) rafRef.current = requestAnimationFrame(tick);
-        else setDisplay(target);
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    }, { threshold: 0.2 });
-    observer.observe(el);
-    return () => { observer.disconnect(); cancelAnimationFrame(rafRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return <span ref={ref} className={className}>{display.toLocaleString("ko-KR")}원</span>;
-}
-
-// ─── RippleButton ────────────────────────────────────────────────────────────
-function RippleButton({ children, className, onClick, style, ...props }:
-  React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const handleClick = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
-    const btn = e.currentTarget;
-    const rect = btn.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const r = document.createElement("span");
-    r.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.35);pointer-events:none;animation:ripple 0.6s ease-out forwards;`;
-    btn.appendChild(r);
-    setTimeout(() => r.remove(), 600);
-    onClick?.(e);
-  }, [onClick]);
-  return (
-    <button className={className} onClick={handleClick}
-      style={{ position: "relative", overflow: "hidden", ...style }} {...props}>
-      {children}
-    </button>
-  );
-}
 
 function fmt(n: number) {
   return n.toLocaleString("ko-KR") + "원";
@@ -449,13 +383,9 @@ function FeatureSection() {
 
         {/* Card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {FEATURES.map((f, i) => {
+          {FEATURES.map((f) => {
             const isActive = activeId === f.id;
-            const isHovered = hoveredId === f.id;
             const isPinned = pinnedId === f.id;
-            const iconTransform = isHovered
-              ? "rotate(12deg) scale(1.15)"
-              : isPinned ? "scale(1.05)" : "scale(1)";
             return (
               <div
                 key={f.id}
@@ -465,7 +395,7 @@ function FeatureSection() {
                 className="bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
                 style={{
                   borderColor: isActive ? f.color : "#f3f4f6",
-                  transform: isActive ? "translateY(-4px)" : "none",
+                  transform: isActive ? "translateY(-3px)" : "none",
                   boxShadow: isActive
                     ? `0 8px 24px -4px ${f.color}28`
                     : "0 1px 3px 0 rgb(0 0 0 / 0.05)",
@@ -473,12 +403,11 @@ function FeatureSection() {
                 }}
               >
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200"
                   style={{
                     backgroundColor: f.pastel,
                     color: f.color,
-                    transform: iconTransform,
-                    transition: "transform 0.3s ease",
+                    transform: isActive ? "scale(1.1)" : "scale(1)",
                   }}
                 >
                   {f.icon}
@@ -588,29 +517,6 @@ export default function Home() {
     { id: "calendar", label: "예약 캘린더" },
   ];
 
-  // ── 타이핑 효과: React state 기반 ──
-  const TYPING_FULL = "이제 제대로 정리하세요";
-  const [typedCount, setTypedCount] = useState(0);
-  const [cursorVisible, setCursorVisible] = useState(true);
-  const [showCursor, setShowCursor] = useState(true);
-  useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) { setTypedCount(TYPING_FULL.length); setShowCursor(false); return; }
-    const cursorTimer = setInterval(() => setCursorVisible(v => !v), 500);
-    let count = 0;
-    const startTimer = setTimeout(() => {
-      const charTimer = setInterval(() => {
-        count++;
-        setTypedCount(count);
-        if (count >= TYPING_FULL.length) {
-          clearInterval(charTimer);
-          setTimeout(() => { setShowCursor(false); clearInterval(cursorTimer); }, 4000);
-        }
-      }, 290);
-    }, 500);
-    return () => { clearTimeout(startTimer); clearInterval(cursorTimer); };
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
       {/* ── 1. Navigation (비로그인 시에만 표시) ──────────────── */}
@@ -664,17 +570,7 @@ export default function Home() {
             미용샵 운영,
             <br />
             <span className="text-primary relative inline-block">
-              <span style={{
-                    display: "inline-block",
-                    whiteSpace: "nowrap",
-                    verticalAlign: "bottom",
-                    clipPath: typedCount < TYPING_FULL.length
-                      ? `inset(0 ${((TYPING_FULL.length - typedCount) / TYPING_FULL.length * 100).toFixed(1)}% 0 0)`
-                      : "none",
-                    borderRight: showCursor
-                      ? `2px solid ${cursorVisible ? "#3B5BDB" : "transparent"}`
-                      : "none",
-                  }}>{TYPING_FULL}</span>
+              이제 제대로 정리하세요
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
@@ -698,10 +594,10 @@ export default function Home() {
           {/* CTA */}
           <div className="flex flex-col items-center gap-3">
             <Link href="/login" className="w-full sm:w-auto">
-              <RippleButton className="w-full sm:w-auto px-10 py-4 md:px-12 md:py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl text-lg md:text-xl font-bold shadow-2xl shadow-primary/30 hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-2.5">
+              <button className="w-full sm:w-auto px-10 py-4 md:px-12 md:py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl text-lg md:text-xl font-bold shadow-2xl shadow-primary/30 hover:-translate-y-1 transition-all duration-200 flex items-center justify-center gap-2.5">
                 <LogIn className="w-5 h-5 md:w-6 md:h-6" />
                 지금 시작하기
-              </RippleButton>
+              </button>
             </Link>
             <p className="text-xs text-muted-foreground">30일 무료체험 · 체험 후 카드 등록으로 계속 이용 가능</p>
           </div>
@@ -854,26 +750,20 @@ export default function Home() {
             <div className="space-y-4">
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 월 손실</p>
-                <p className="text-2xl font-bold text-red-500">
-                  <CountUpAmount value={monthlyLoss} />
-                </p>
+                <p className="text-2xl font-bold text-red-500">{fmt(monthlyLoss)}</p>
                 <p className="text-xs text-gray-400 mt-1">
                   노쇼 {noShowCount}건 × 단가 {fmt(avgPrice)}
                 </p>
               </div>
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 연간 손실</p>
-                <p className="text-2xl font-bold text-red-500">
-                  <CountUpAmount value={yearlyLoss} />
-                </p>
+                <p className="text-2xl font-bold text-red-500">{fmt(yearlyLoss)}</p>
                 <p className="text-xs text-gray-400 mt-1">월 {fmt(monthlyLoss)} × 12개월</p>
               </div>
               <div className="bg-white rounded-xl border-l-4 border-primary border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">정리하개 리마인더로 회수 가능한 금액</p>
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl font-bold text-primary">
-                    <CountUpAmount value={monthlyRecoverable} />
-                  </p>
+                  <p className="text-2xl font-bold text-primary">{fmt(monthlyRecoverable)}</p>
                   <span className="text-sm text-gray-400">/월</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
@@ -882,9 +772,7 @@ export default function Home() {
               </div>
               <div className="bg-white rounded-xl border-l-4 border-primary border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">정리하개 연간 비용</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  <CountUpAmount value={annualCost} />
-                </p>
+                <p className="text-2xl font-bold text-gray-800">{fmt(annualCost)}</p>
                 <p className="text-xs text-primary font-medium mt-1">
                   회수 금액이 비용을 훨씬 초과해요
                 </p>
@@ -936,9 +824,9 @@ export default function Home() {
 
           <div className="text-center">
             <Link href="/register">
-              <RippleButton className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+              <button className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
                 30일 무료로 시작하기
-              </RippleButton>
+              </button>
             </Link>
             <p className="mt-3 text-sm text-gray-400">신용카드 불필요 · 언제든 해지 가능</p>
           </div>
@@ -951,9 +839,9 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">지금 바로 시작해보세요</h2>
           <p className="text-white/70 mb-8">30일 동안 모든 기능을 무료로 사용할 수 있어요</p>
           <Link href="/register">
-            <RippleButton className="px-8 py-4 bg-white text-primary rounded-xl font-semibold text-lg hover:bg-white/90 transition-colors shadow-xl">
+            <button className="px-8 py-4 bg-white text-primary rounded-xl font-semibold text-lg hover:bg-white/90 transition-colors shadow-xl">
               무료로 시작하기
-            </RippleButton>
+            </button>
           </Link>
           <p className="mt-4 text-white/50 text-sm">30일 무료 체험 후 월 39,000원</p>
         </div>
