@@ -428,7 +428,7 @@ function HeroSection() {
             inset: 0,
             zIndex: 1,
             background:
-              "linear-gradient(to right, #FEFAF5 38%, rgba(254,250,245,0.92) 52%, rgba(254,250,245,0.15) 100%)",
+              "linear-gradient(to right, #FEFAF5 18%, rgba(254,250,245,0.6) 32%, rgba(254,250,245,0) 55%)",
           }}
         />
       </div>
