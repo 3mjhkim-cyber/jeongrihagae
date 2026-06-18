@@ -432,18 +432,11 @@ function HeroSection() {
 
         <h1 className="hs-heading">
           미용샵 운영,<br />
-          <span className="hs-heading-accent">
-            {/* 레이아웃 공간 유지용 (보이지 않음) */}
-            <span style={{ visibility: "hidden", whiteSpace: "nowrap" }}>이제 제대로 정리하세요</span>
-            {/* 실제 타이핑 텍스트 */}
-            <span style={{
-              position: "absolute",
-              left: 0, top: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              width: `${(revealed / FULL.length * 100).toFixed(1)}%`,
-              borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
-            }}>이제 제대로 정리하세요</span>
+          <span className="hs-heading-accent" style={{
+            borderRight: showCursor ? `2px solid ${cursorOn ? "#3B5BDB" : "transparent"}` : "none",
+            paddingRight: "2px",
+          }}>
+            {FULL.slice(0, revealed)}
             <svg className="hs-underline" viewBox="0 0 100 10" preserveAspectRatio="none">
               <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
             </svg>
