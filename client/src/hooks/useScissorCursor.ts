@@ -2,6 +2,8 @@ import { useEffect } from "react";
 
 export function useScissorCursor() {
   useEffect(() => {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+
     // Create cursor element
     const cursor = document.createElement("div");
     cursor.id = "scissor-cursor";
