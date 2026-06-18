@@ -369,7 +369,6 @@ const HERO_IMAGES = [
 ];
 
 function HeroSection() {
-  const { user } = useAuth();
   const [activeIdx, setActiveIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -378,6 +377,8 @@ function HeroSection() {
   const [revealed, setRevealed] = useState(0);
   const [cursorOn, setCursorOn] = useState(true);
   const [showCursor, setShowCursor] = useState(true);
+  const revealedRef = useRef(0);
+  const doneRef = useRef(false);
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -391,18 +392,26 @@ function HeroSection() {
       setRevealed(FULL.length); setShowCursor(false); return;
     }
     const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
-    return () => clearInterval(cursorTimer);
-  }, []);
 
-  useEffect(() => {
-    if (revealed >= FULL.length) {
-      const t = setTimeout(() => setShowCursor(false), 3500);
-      return () => clearTimeout(t);
-    }
-    const delay = revealed === 0 ? 800 : 420;
-    const t = setTimeout(() => setRevealed(r => r + 1), delay);
-    return () => clearTimeout(t);
-  }, [revealed]);
+    const tick = () => {
+      if (doneRef.current) return;
+      revealedRef.current += 1;
+      setRevealed(revealedRef.current);
+      if (revealedRef.current >= FULL.length) {
+        doneRef.current = true;
+        clearInterval(cursorTimer);
+        setTimeout(() => setShowCursor(false), 3500);
+      } else {
+        setTimeout(tick, 420);
+      }
+    };
+
+    const startTimer = setTimeout(tick, 800);
+    return () => {
+      clearTimeout(startTimer);
+      clearInterval(cursorTimer);
+    };
+  }, []);
 
   return (
     <section className="hs-section">
