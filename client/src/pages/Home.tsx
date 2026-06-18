@@ -481,14 +481,9 @@ function HeroSection() {
           position: absolute;
           inset: 0;
           z-index: 1;
-          background: linear-gradient(
-            to right,
-            #FEFAF5 0%,
-            rgba(254,250,245,0.92) 12%,
-            rgba(254,250,245,0.6) 24%,
-            rgba(254,250,245,0.2) 40%,
-            rgba(254,250,245,0) 60%
-          );
+          background:
+            linear-gradient(to right, #FEFAF5 0%, rgba(254,250,245,0.92) 12%, rgba(254,250,245,0.6) 24%, rgba(254,250,245,0.2) 40%, rgba(254,250,245,0) 60%),
+            linear-gradient(to top, #FEFAF5 0%, rgba(254,250,245,0.7) 15%, rgba(254,250,245,0) 35%);
         }
 
         /* ── 텍스트 영역 ── */
