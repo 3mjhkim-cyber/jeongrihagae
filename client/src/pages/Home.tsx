@@ -588,42 +588,27 @@ export default function Home() {
     { id: "calendar", label: "예약 캘린더" },
   ];
 
-  // ── 타이핑 효과: JS로 글자 하나씩 추가 ──
-  const typingRef = useRef<HTMLSpanElement>(null);
+  // ── 타이핑 효과: React state 기반 ──
+  const TYPING_FULL = "이제 제대로 정리하세요";
+  const [typedCount, setTypedCount] = useState(0);
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const [showCursor, setShowCursor] = useState(true);
   useEffect(() => {
-    const el = typingRef.current;
-    if (!el) return;
-    const text = "이제 제대로 정리하세요";
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) { el.textContent = text; return; }
-    el.textContent = "";
-    el.style.borderRight = "2px solid #3B5BDB";
-    // 커서 깜빡임
-    let cursorOn = true;
-    const cursorTimer = setInterval(() => {
-      cursorOn = !cursorOn;
-      el.style.borderColor = cursorOn ? "#3B5BDB" : "transparent";
-    }, 500);
-    // 0.5s 딜레이 후 글자 추가 시작
+    if (reduced) { setTypedCount(TYPING_FULL.length); setShowCursor(false); return; }
+    const cursorTimer = setInterval(() => setCursorVisible(v => !v), 500);
+    let count = 0;
     const startTimer = setTimeout(() => {
-      let i = 0;
       const charTimer = setInterval(() => {
-        el.textContent = text.slice(0, i + 1);
-        i++;
-        if (i >= text.length) {
+        count++;
+        setTypedCount(count);
+        if (count >= TYPING_FULL.length) {
           clearInterval(charTimer);
-          // 4회 깜빡임 후 커서 제거 (약 4s)
-          setTimeout(() => {
-            clearInterval(cursorTimer);
-            el.style.borderRight = "none";
-          }, 4000);
+          setTimeout(() => { setShowCursor(false); clearInterval(cursorTimer); }, 4000);
         }
-      }, 290); // 3.2s / 11글자 ≈ 290ms
+      }, 290);
     }, 500);
-    return () => {
-      clearTimeout(startTimer);
-      clearInterval(cursorTimer);
-    };
+    return () => { clearTimeout(startTimer); clearInterval(cursorTimer); };
   }, []);
 
   return (
@@ -679,7 +664,14 @@ export default function Home() {
             미용샵 운영,
             <br />
             <span className="text-primary relative inline-block">
-              <span ref={typingRef}>이제 제대로 정리하세요</span>
+              <span style={{
+                    display: "inline-block",
+                    whiteSpace: "nowrap",
+                    verticalAlign: "bottom",
+                    borderRight: showCursor
+                      ? `2px solid ${cursorVisible ? "#3B5BDB" : "transparent"}`
+                      : "none",
+                  }}>{TYPING_FULL.slice(0, typedCount) || " "}</span>
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
