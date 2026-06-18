@@ -588,11 +588,20 @@ export default function Home() {
     { id: "calendar", label: "예약 캘린더" },
   ];
 
-  // ── 타이핑 효과: CSS steps() 애니메이션 완료 후 커서 제거 ──
+  // ── 타이핑 효과: 인라인 스타일로 직접 적용 ──
   const typingRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const el = typingRef.current;
     if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    el.style.cssText = `
+      display: inline-block;
+      white-space: nowrap;
+      border-right: 2px solid #3B5BDB;
+      vertical-align: bottom;
+      animation: typeOn 3.2s steps(11, end) 0.5s both, blink 1s step-end 0.5s 4;
+    `;
     const onEnd = (e: AnimationEvent) => {
       if (e.animationName === "blink") {
         el.style.borderRight = "none";
@@ -656,7 +665,7 @@ export default function Home() {
             미용샵 운영,
             <br />
             <span className="text-primary relative inline-block">
-              <span ref={typingRef} className="typing-text">이제 제대로 정리하세요</span>
+              <span ref={typingRef}>이제 제대로 정리하세요</span>
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
