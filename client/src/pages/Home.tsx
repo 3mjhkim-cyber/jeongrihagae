@@ -375,9 +375,6 @@ const TypingText = memo(function TypingText({ full }: { full: string }) {
   const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setRevealed(full.length); setShowCursor(false); return;
-    }
     let count = 0;
     let done = false;
     const cursorTimer = setInterval(() => setCursorOn(v => !v), 530);
