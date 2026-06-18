@@ -668,10 +668,13 @@ export default function Home() {
                     display: "inline-block",
                     whiteSpace: "nowrap",
                     verticalAlign: "bottom",
+                    clipPath: typedCount < TYPING_FULL.length
+                      ? `inset(0 ${((TYPING_FULL.length - typedCount) / TYPING_FULL.length * 100).toFixed(1)}% 0 0)`
+                      : "none",
                     borderRight: showCursor
                       ? `2px solid ${cursorVisible ? "#3B5BDB" : "transparent"}`
                       : "none",
-                  }}>{TYPING_FULL.slice(0, typedCount) || " "}</span>
+                  }}>{TYPING_FULL}</span>
               <svg
                 className="absolute -bottom-1.5 left-0 w-full h-2.5 md:h-3 text-primary/30"
                 viewBox="0 0 100 10"
