@@ -400,7 +400,7 @@ function HeroSection() {
           clearInterval(charTimer);
           setTimeout(() => { setShowCursor(false); clearInterval(cursorTimer); }, 3500);
         }
-      }, 280);
+      }, 420);
     }, 600);
     return () => { clearTimeout(startTimer); clearInterval(cursorTimer); };
   }, []);
