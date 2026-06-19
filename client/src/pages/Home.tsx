@@ -436,7 +436,7 @@ function HeroSection() {
 
   return (
     <section className="hs-section">
-      {/* ── 데스크톱 슬라이드쇼 (오른쪽) ── */}
+      {/* ── 배경 슬라이드쇼 ── */}
       <div className="hs-img-wrap">
         {HERO_IMAGES.map((src, i) => (
           <img
@@ -504,12 +504,10 @@ function HeroSection() {
           align-items: center;
         }
 
-        /* ── 데스크톱 이미지 ── */
+        /* ── 배경 이미지 (전체) ── */
         .hs-img-wrap {
           position: absolute;
-          right: 0; top: 0;
-          width: 58%;
-          height: 100%;
+          inset: 0;
           z-index: 0;
         }
         .hs-img {
@@ -520,16 +518,14 @@ function HeroSection() {
           object-position: center 25%;
           opacity: 0;
           transition: opacity 1.5s ease-in-out;
-          filter: brightness(0.93) saturate(0.88) sepia(0.06);
+          filter: brightness(0.9) saturate(0.8) sepia(0.08);
         }
         .hs-img-active { opacity: 1; }
         .hs-gradient {
           position: absolute;
           inset: 0;
           z-index: 1;
-          background:
-            linear-gradient(to right, #FEFAF5 0%, rgba(254,250,245,0.92) 12%, rgba(254,250,245,0.6) 24%, rgba(254,250,245,0.2) 40%, rgba(254,250,245,0) 60%),
-            linear-gradient(to top, #FEFAF5 0%, rgba(254,250,245,0.7) 15%, rgba(254,250,245,0) 35%);
+          background: rgba(254,250,245,0.72);
         }
 
         /* ── 텍스트 영역 ── */
@@ -537,7 +533,7 @@ function HeroSection() {
           position: relative;
           z-index: 2;
           flex: 1;
-          max-width: 48%;
+          max-width: 560px;
           padding: 80px 32px 80px 80px;
           display: flex;
           flex-direction: column;
