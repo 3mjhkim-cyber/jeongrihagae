@@ -392,7 +392,7 @@ const TypingHeading = memo(function TypingHeading() {
         clearInterval(cursorTimer);
         setTimeout(() => setShowCursor(false), 3500);
       } else {
-        setTimeout(tick, 150);
+        setTimeout(tick, 100);
       }
     };
     const start = setTimeout(tick, 600);
