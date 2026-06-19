@@ -362,10 +362,10 @@ const FEATURES = [
 
 // ─── Hero Slideshow ─────────────────────────────────────────────────────────
 const HERO_IMAGES = [
-  "/hero-dog1.jpg",
-  "/hero-dog2.jpg",
-  "/hero-dog3.jpg",
-  "/hero-dog4.jpg",
+  { src: "/hero-dog1.jpg", pos: "center 38%" },
+  { src: "/hero-dog2.jpg", pos: "30% 25%" },
+  { src: "/hero-dog3.jpg", pos: "center 48%" },
+  { src: "/hero-dog4.jpg", pos: "38% 52%" },
 ];
 
 // React.memo로 감싸면 props가 바뀌지 않는 한 절대 re-render 안 됨
@@ -438,12 +438,13 @@ function HeroSection() {
     <section className="hs-section">
       {/* ── 배경 슬라이드쇼 ── */}
       <div className="hs-img-wrap">
-        {HERO_IMAGES.map((src, i) => (
+        {HERO_IMAGES.map((img, i) => (
           <img
-            key={src}
-            src={src}
+            key={img.src}
+            src={img.src}
             alt=""
             className={`hs-img${i === activeIdx ? " hs-img-active" : ""}`}
+            style={{ objectPosition: img.pos }}
           />
         ))}
         <div className="hs-gradient" />
@@ -483,12 +484,13 @@ function HeroSection() {
 
       {/* ── 모바일 배경 이미지 ── */}
       <div className="hs-mobile-bg">
-        {HERO_IMAGES.map((src, i) => (
+        {HERO_IMAGES.map((img, i) => (
           <img
-            key={src}
-            src={src}
+            key={img.src}
+            src={img.src}
             alt=""
             className={`hs-img${i === activeIdx ? " hs-img-active" : ""}`}
+            style={{ objectPosition: img.pos }}
           />
         ))}
         <div className="hs-mobile-overlay" />
@@ -515,7 +517,7 @@ function HeroSection() {
           inset: 0;
           width: 100%; height: 100%;
           object-fit: cover;
-          object-position: center 25%;
+          object-position: center center;
           opacity: 0;
           transition: opacity 1.5s ease-in-out;
           filter: brightness(0.9) saturate(0.8) sepia(0.08);
@@ -652,7 +654,7 @@ function HeroSection() {
             z-index: 1;
           }
           .hs-img {
-            object-position: center 20%;
+            /* object-position set per-image via inline style */
           }
           .hs-content {
             position: relative;
