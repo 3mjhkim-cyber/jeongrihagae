@@ -481,8 +481,8 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* ── 모바일 슬라이드쇼 (하단) ── */}
-      <div className="hs-mobile-img">
+      {/* ── 모바일 배경 이미지 ── */}
+      <div className="hs-mobile-bg">
         {HERO_IMAGES.map((src, i) => (
           <img
             key={src}
@@ -629,41 +629,45 @@ function HeroSection() {
           margin: 0;
         }
 
-        /* ── 모바일 ── */
-        .hs-mobile-img { display: none; }
+        /* ── 모바일 배경 ── */
+        .hs-mobile-bg { display: none; }
 
         @media (max-width: 768px) {
           .hs-section {
-            flex-direction: column;
-            align-items: stretch;
-            min-height: auto;
+            min-height: calc(100vh - 64px);
+            align-items: center;
           }
           .hs-img-wrap { display: none; }
-          .hs-content {
-            max-width: 100%;
-            padding: 48px 24px 28px;
-            align-items: center;
-            text-align: center;
-          }
-          .hs-brand { justify-content: center; }
-          .hs-cta { align-items: center; }
-          .hs-mobile-img {
+          .hs-mobile-bg {
             display: block;
-            position: relative;
-            width: 100%;
-            height: 260px;
-            overflow: hidden;
-            flex-shrink: 0;
+            position: absolute;
+            inset: 0;
+            z-index: 0;
           }
           .hs-mobile-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(254,250,245,0.25);
+            background: linear-gradient(
+              to bottom,
+              rgba(254,250,245,0.82) 0%,
+              rgba(254,250,245,0.72) 50%,
+              rgba(254,250,245,0.88) 100%
+            );
             z-index: 1;
           }
           .hs-img {
             object-position: center 20%;
           }
+          .hs-content {
+            position: relative;
+            z-index: 2;
+            max-width: 100%;
+            padding: 60px 24px 60px;
+            align-items: center;
+            text-align: center;
+          }
+          .hs-brand { justify-content: center; }
+          .hs-cta { align-items: center; }
         }
       `}</style>
     </section>
