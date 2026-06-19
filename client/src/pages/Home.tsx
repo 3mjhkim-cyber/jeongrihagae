@@ -820,9 +820,9 @@ export default function Home() {
   const yearlyLoss = monthlyLoss * 12;
   const monthlyRecoverable = Math.round(monthlyLoss * (reminderEffect / 100));
   const yearlyRecoverable = monthlyRecoverable * 12;
-  const annualCost = 468000;
+  const annualCost = 118800;
   const annualNetProfit = yearlyRecoverable - annualCost;
-  const roiMultiplier = Math.round((avgPrice * 2) / 39000);
+  const roiMultiplier = Math.round((avgPrice * 2) / 9900);
 
   // ── 카운트업 refs ──
   const countUpTriggered = useRef(false);
@@ -1116,7 +1116,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-xs font-semibold text-primary uppercase tracking-wide">
-              월 39,000원의 가치
+              월 9,900원의 가치
             </span>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mt-2 mb-3">
               구독료보다 훨씬 더 많이 돌아와요
@@ -1130,8 +1130,8 @@ export default function Home() {
             {/* Card 1 */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-50">
               <p className="text-sm text-gray-500 mb-2">월 구독료</p>
-              <p className="text-3xl font-bold text-red-500 mb-1">39,000원</p>
-              <p className="text-xs text-gray-400">하루 1,300원 / 커피 한 잔보다 저렴해요</p>
+              <p className="text-3xl font-bold text-red-500 mb-1">9,900원</p>
+              <p className="text-xs text-gray-400">하루 330원 / 커피 한 잔보다 훨씬 저렴해요</p>
             </div>
             {/* Card 2 */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-50">
@@ -1172,7 +1172,7 @@ export default function Home() {
               무료로 시작하기
             </button>
           </Link>
-          <p className="mt-4 text-white/50 text-sm">30일 무료 체험 후 월 39,000원</p>
+          <p className="mt-4 text-white/50 text-sm">30일 무료 체험 후 월 9,900원</p>
         </div>
       </section>
 

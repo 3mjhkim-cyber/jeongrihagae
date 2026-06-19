@@ -715,7 +715,7 @@ export async function registerRoutes(
 
       // 플랜별 금액 검증
       const PLAN_PRICES: Record<string, number> = {
-        basic: 39000,
+        basic: 9900,
         premium: 49000,
         enterprise: 99000,
       };
@@ -1811,7 +1811,7 @@ export async function registerRoutes(
       }
 
       const PLAN_PRICES: Record<string, number> = {
-        basic: 39000,
+        basic: 9900,
         premium: 49000,
         enterprise: 99000,
       };

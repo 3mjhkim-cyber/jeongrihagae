@@ -153,7 +153,7 @@ export const notificationLogs = pgTable("notification_logs", {
 export const userPayments = pgTable("user_payments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
-  amount: integer("amount").notNull(),          // 39000
+  amount: integer("amount").notNull(),          // 9900
   attemptedAt: timestamp("attempted_at").notNull(),
   paidAt: timestamp("paid_at"),                 // nullable: 실패 시 null
   result: text("result").notNull(),             // success | fail
