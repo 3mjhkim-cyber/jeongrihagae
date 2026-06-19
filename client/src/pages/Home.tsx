@@ -410,7 +410,7 @@ const TypingHeading = memo(function TypingHeading() {
         {line1}
       </span>
       {count > LINE1.length && <><br />
-        <span className="hs-heading-accent">
+        <span className="hs-heading-accent grad-text">
           <span style={{ borderRight: !onLine1 ? cursor : "none", paddingRight: "2px" }}>
             {line2}
           </span>
@@ -693,7 +693,7 @@ function FeatureSection() {
 
         {/* Card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {FEATURES.map((f) => {
+          {FEATURES.map((f, fi) => {
             const isActive = activeId === f.id;
             const isPinned = pinnedId === f.id;
             return (
@@ -702,8 +702,9 @@ function FeatureSection() {
                 onMouseEnter={() => setHoveredId(f.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleClick(f.id)}
-                className="bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
+                className="fade-up bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
                 style={{
+                  transitionDelay: `${fi * 0.08}s`,
                   borderColor: isActive ? f.color : "#f3f4f6",
                   transform: isActive ? "translateY(-3px)" : "none",
                   boxShadow: isActive
@@ -821,6 +822,86 @@ export default function Home() {
   const annualNetProfit = yearlyRecoverable - annualCost;
   const roiMultiplier = Math.round((avgPrice * 2) / 39000);
 
+  // ── 카운트업 refs ──
+  const countUpTriggered = useRef(false);
+  const monthlyLossRef = useRef<HTMLParagraphElement>(null);
+  const yearlyLossRef = useRef<HTMLParagraphElement>(null);
+  const monthlyRecoverableRef = useRef<HTMLParagraphElement>(null);
+
+  // ── 카운트업 ──
+  useEffect(() => {
+    const els = [
+      { ref: monthlyLossRef, val: () => monthlyLoss },
+      { ref: yearlyLossRef, val: () => yearlyLoss },
+      { ref: monthlyRecoverableRef, val: () => monthlyRecoverable },
+    ];
+    if (countUpTriggered.current) {
+      els.forEach(({ ref, val }) => {
+        if (ref.current) ref.current.textContent = val().toLocaleString("ko-KR") + "원";
+      });
+      return;
+    }
+    const target = monthlyLossRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || countUpTriggered.current) return;
+      countUpTriggered.current = true;
+      observer.disconnect();
+      function countUp(el: HTMLElement, getTarget: () => number) {
+        const start = performance.now();
+        const t = getTarget();
+        function tick(now: number) {
+          const p = Math.min((now - start) / 1200, 1);
+          const ease = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(ease * t).toLocaleString("ko-KR") + "원";
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+      els.forEach(({ ref, val }) => { if (ref.current) countUp(ref.current, val); });
+    }, { threshold: 0.2 });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [monthlyLoss, yearlyLoss, monthlyRecoverable]);
+
+  // ── 버튼 리플 ──
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `@keyframes ripple { from { transform: translate(-50%,-50%) scale(0); opacity: 0.4; } to { transform: translate(-50%,-50%) scale(4); opacity: 0; } }`;
+    document.head.appendChild(style);
+    const buttons = document.querySelectorAll<HTMLButtonElement>(".hs-btn, .ripple-btn");
+    const handlers: Array<{ el: HTMLButtonElement; fn: (e: MouseEvent) => void }> = [];
+    buttons.forEach((btn) => {
+      btn.style.position = "relative";
+      btn.style.overflow = "hidden";
+      const fn = (e: MouseEvent) => {
+        const rect = btn.getBoundingClientRect();
+        const r = document.createElement("span");
+        r.style.cssText = `position:absolute;left:${e.clientX - rect.left}px;top:${e.clientY - rect.top}px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.35);pointer-events:none;transform:translate(-50%,-50%) scale(0);animation:ripple 0.6s ease-out forwards;`;
+        btn.appendChild(r);
+        setTimeout(() => r.remove(), 700);
+      };
+      btn.addEventListener("click", fn);
+      handlers.push({ el: btn, fn });
+    });
+    return () => { handlers.forEach(({ el, fn }) => el.removeEventListener("click", fn)); style.remove(); };
+  }, []);
+
+  // ── fade-up ──
+  useEffect(() => {
+    const sections = document.querySelectorAll<HTMLElement>(".fade-up");
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "dashboard", label: "매출 대시보드" },
     { id: "customers", label: "고객 관리" },
@@ -854,7 +935,7 @@ export default function Home() {
       <FeatureSection />
 
       {/* ── 4. Product Showcase ────────────────────────────────── */}
-      <section className="py-16 md:py-24 bg-gray-50 px-4">
+      <section className="fade-up py-16 md:py-24 bg-gray-50 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">이렇게 생겼어요</h2>
@@ -885,7 +966,7 @@ export default function Home() {
       </section>
 
       {/* ── 4. No-show Calculator ──────────────────────────────── */}
-      <section className="py-16 md:py-24 px-4">
+      <section className="fade-up py-16 md:py-24 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
@@ -996,20 +1077,20 @@ export default function Home() {
             <div className="space-y-4">
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 월 손실</p>
-                <p className="text-2xl font-bold text-red-500">{fmt(monthlyLoss)}</p>
+                <p ref={monthlyLossRef} className="text-2xl font-bold text-red-500">{fmt(monthlyLoss)}</p>
                 <p className="text-xs text-gray-400 mt-1">
                   노쇼 {noShowCount}건 × 단가 {fmt(avgPrice)}
                 </p>
               </div>
               <div className="bg-white rounded-xl border-l-4 border-red-400 border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">리마인더 없을 때 연간 손실</p>
-                <p className="text-2xl font-bold text-red-500">{fmt(yearlyLoss)}</p>
+                <p ref={yearlyLossRef} className="text-2xl font-bold text-red-500">{fmt(yearlyLoss)}</p>
                 <p className="text-xs text-gray-400 mt-1">월 {fmt(monthlyLoss)} × 12개월</p>
               </div>
               <div className="bg-white rounded-xl border-l-4 border-primary border border-gray-100 p-5 shadow-sm">
                 <p className="text-sm text-gray-500 mb-1">정리하개 리마인더로 회수 가능한 금액</p>
                 <div className="flex items-baseline gap-1.5">
-                  <p className="text-2xl font-bold text-primary">{fmt(monthlyRecoverable)}</p>
+                  <p ref={monthlyRecoverableRef} className="text-2xl font-bold text-primary">{fmt(monthlyRecoverable)}</p>
                   <span className="text-sm text-gray-400">/월</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
@@ -1029,7 +1110,7 @@ export default function Home() {
       </section>
 
       {/* ── 5. ROI Copy ────────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-4 bg-[#EFF6FF]">
+      <section className="fade-up py-16 md:py-24 px-4 bg-[#EFF6FF]">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-xs font-semibold text-primary uppercase tracking-wide">
@@ -1070,7 +1151,7 @@ export default function Home() {
 
           <div className="text-center">
             <Link href="/register">
-              <button className="px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+              <button className="ripple-btn px-8 py-4 bg-primary text-white rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
                 30일 무료로 시작하기
               </button>
             </Link>
@@ -1080,12 +1161,12 @@ export default function Home() {
       </section>
 
       {/* ── 7. Bottom CTA ──────────────────────────────────────── */}
-      <section className="py-16 md:py-24 px-4 bg-primary">
+      <section className="fade-up py-16 md:py-24 px-4 bg-primary">
         <div className="max-w-xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">지금 바로 시작해보세요</h2>
           <p className="text-white/70 mb-8">30일 동안 모든 기능을 무료로 사용할 수 있어요</p>
           <Link href="/register">
-            <button className="px-8 py-4 bg-white text-primary rounded-xl font-semibold text-lg hover:bg-white/90 transition-colors shadow-xl">
+            <button className="ripple-btn px-8 py-4 bg-white text-primary rounded-xl font-semibold text-lg hover:bg-white/90 transition-colors shadow-xl">
               무료로 시작하기
             </button>
           </Link>
