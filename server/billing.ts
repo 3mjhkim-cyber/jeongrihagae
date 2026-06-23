@@ -48,9 +48,9 @@ export async function chargeBillingKey(
   // POST /payments/{paymentId}/billing-key
   //   storeId, billingKey, channelKey, orderName, amount, currency, customer
   const body = {
-    storeId: process.env.PORTONE_STORE_ID,
+    storeId: process.env.VITE_PORTONE_STORE_ID || process.env.PORTONE_STORE_ID,
     billingKey,
-    channelKey: process.env.PORTONE_CHANNEL_KEY,
+    channelKey: process.env.VITE_PORTONE_CHANNEL_KEY || process.env.PORTONE_CHANNEL_KEY,
     orderName: "펫그루머 서비스 월정액",
     customer: { id: String(userId) },
     amount: { total: PLAN_PRICE },

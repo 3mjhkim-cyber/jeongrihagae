@@ -1868,8 +1868,8 @@ export async function registerRoutes(
     }
 
     const apiSecret  = process.env.PORTONE_API_SECRET;
-    const storeId    = process.env.PORTONE_STORE_ID;
-    const channelKey = process.env.PORTONE_CHANNEL_KEY;
+    const storeId    = process.env.VITE_PORTONE_STORE_ID || process.env.PORTONE_STORE_ID;
+    const channelKey = process.env.VITE_PORTONE_CHANNEL_KEY || process.env.PORTONE_CHANNEL_KEY;
 
     // 개발 스텁
     if (!apiSecret) {
