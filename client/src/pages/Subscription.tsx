@@ -10,7 +10,7 @@
  *   cancelled       → 해지 완료
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Check, CreditCard, ArrowLeft, AlertTriangle,
-  CalendarDays, Lock, RefreshCw, Scissors, Shield,
+  CalendarDays, Lock, RefreshCw, Scissors,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -28,6 +28,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
+import * as PortOne from "@portone/browser-sdk/v2";
 
 // ─── 플랜 정의 ─────────────────────────────────────────────────────────────────
 const PLAN = {
@@ -93,121 +94,6 @@ function fmtDate(d: string | null | undefined) {
 }
 
 
-interface CardFormProps {
-  form: { number: string; expiryMonth: string; expiryYear: string; birth: string; password: string };
-  onChange: (form: CardFormProps["form"]) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  price: number;
-}
-
-function CardForm({ form, onChange, onSubmit, onCancel, isLoading, price }: CardFormProps) {
-  return (
-    <div className="rounded-2xl border bg-card overflow-hidden">
-      {/* 헤더 */}
-      <div className="px-6 pt-6 pb-4 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <CreditCard className="w-4.5 h-4.5 text-primary" />
-            </div>
-            <span className="font-semibold text-base">카드 정보 입력</span>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">결제 금액</p>
-            <p className="text-lg font-bold text-primary">{price.toLocaleString()}원</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 입력 필드 */}
-      <div className="px-6 py-5 space-y-5">
-        {/* 카드 번호 */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">카드 번호</label>
-          <input
-            className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
-            placeholder="0000  0000  0000  0000"
-            maxLength={19}
-            value={form.number}
-            onChange={e => {
-              const v = e.target.value.replace(/\D/g, "").slice(0, 16);
-              onChange({ ...form, number: v.replace(/(.{4})/g, "$1 ").trim() });
-            }}
-          />
-        </div>
-
-        {/* 유효기간 + 비밀번호 */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">유효기간</label>
-            <input
-              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
-              placeholder="MM / YY"
-              maxLength={7}
-              value={form.expiryMonth
-                ? form.expiryYear
-                  ? `${form.expiryMonth} / ${form.expiryYear}`
-                  : form.expiryMonth
-                : ""}
-              onChange={e => {
-                const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
-                onChange({ ...form, expiryMonth: digits.slice(0, 2), expiryYear: digits.slice(2) });
-              }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">비밀번호 앞 2자리</label>
-            <input
-              className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
-              type="password"
-              placeholder="• •"
-              maxLength={2}
-              value={form.password}
-              onChange={e => onChange({ ...form, password: e.target.value.replace(/\D/g, "").slice(0, 2) })}
-            />
-          </div>
-        </div>
-
-        {/* 생년월일 */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">
-            생년월일
-            <span className="ml-1.5 text-xs font-normal text-muted-foreground">법인은 사업자번호 10자리</span>
-          </label>
-          <input
-            className="w-full h-12 rounded-xl border border-input bg-background px-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
-            placeholder="YYMMDD"
-            maxLength={10}
-            value={form.birth}
-            onChange={e => onChange({ ...form, birth: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-          />
-        </div>
-
-        {/* 보안 안내 */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Shield className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-          <span>SSL 암호화로 안전하게 보호됩니다. 카드 정보는 저장되지 않습니다.</span>
-        </div>
-      </div>
-
-      {/* 버튼 */}
-      <div className="px-6 pb-6 flex gap-3">
-        <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={onCancel} disabled={isLoading}>
-          취소
-        </Button>
-        <Button className="flex-1 h-12 rounded-xl font-semibold text-base" onClick={onSubmit} disabled={isLoading}>
-          {isLoading
-            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</>
-            : <><Lock className="w-4 h-4 mr-2" />{price.toLocaleString()}원 결제</>
-          }
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 export default function Subscription() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -217,15 +103,6 @@ export default function Subscription() {
 
   const [isRegisteringCard, setIsRegisteringCard] = useState(false);
   const [showDemoCardDialog, setShowDemoCardDialog] = useState(false);
-  const [showCardForm, setShowCardForm] = useState(false);
-  const [cardForm, setCardForm] = useState({ number: "", expiryMonth: "", expiryYear: "", birth: "", password: "" });
-  const cardFormRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (showCardForm && cardFormRef.current) {
-      setTimeout(() => cardFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-    }
-  }, [showCardForm]);
-  const [showPayConfirmDialog, setShowPayConfirmDialog] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNote, setCancelNote] = useState("");
@@ -290,40 +167,25 @@ export default function Subscription() {
     }
   };
 
-  const handleRegisterCard = () => {
+  const handleRegisterCard = async () => {
     if (!isPortOneConfigured) {
       setShowDemoCardDialog(true);
       return;
     }
-    setCardForm({ number: "", expiryMonth: "", expiryYear: "", birth: "", password: "" });
-    setShowCardForm(true);
-  };
-
-  const handleDirectCardSubmit = () => {
-    const { number, expiryMonth, expiryYear, birth, password } = cardForm;
-    if (!number || !expiryMonth || !expiryYear || !birth || !password) {
-      toast({ title: "입력 오류", description: "모든 항목을 입력해주세요.", variant: "destructive" });
-      return;
-    }
-    setShowPayConfirmDialog(true);
-  };
-
-  const handleConfirmPay = async () => {
-    setShowPayConfirmDialog(false);
-    const { number, expiryMonth, expiryYear, birth, password } = cardForm;
     setIsRegisteringCard(true);
     try {
-      const res = await apiRequest("POST", "/api/subscription/issue-billing-key-direct", {
-        cardNumber: number.replace(/\s/g, ""),
-        expiryMonth: expiryMonth.padStart(2, "0"),
-        expiryYear: expiryYear.slice(-2),
-        birth,
-        passwordTwoDigits: password,
+      const issueId = `issue-${Date.now()}`;
+      const response = await PortOne.requestIssueBillingKey({
+        storeId: import.meta.env.VITE_PORTONE_STORE_ID,
+        channelKey: import.meta.env.VITE_PORTONE_CHANNEL_KEY,
+        billingKeyMethod: "CARD",
+        issueId,
+        issueName: "스탠다드 플랜 구독",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "카드 등록에 실패했습니다.");
-      await attachAndPay(data.billingKey);
-      setShowCardForm(false);
+      if (!response || response.code) {
+        throw new Error((response as any)?.message || "카드 등록이 취소되었습니다.");
+      }
+      await attachAndPay((response as any).billingKey);
     } catch (err: any) {
       toast({ title: "카드 등록 실패", description: err.message, variant: "destructive" });
       setIsRegisteringCard(false);
@@ -446,50 +308,8 @@ export default function Subscription() {
             </p>
           </div>
 
-          {showCardForm && (
-            <div ref={cardFormRef} className="mt-2">
-              <CardForm
-                form={cardForm}
-                onChange={setCardForm}
-                onSubmit={handleDirectCardSubmit}
-                onCancel={() => setShowCardForm(false)}
-                isLoading={isRegisteringCard}
-                price={PLAN.price}
-              />
-            </div>
-          )}
         </div>
       </div>
-      <Dialog open={showPayConfirmDialog} onOpenChange={setShowPayConfirmDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>결제 확인</DialogTitle>
-            <DialogDescription>아래 카드로 결제를 진행하시겠습니까?</DialogDescription>
-          </DialogHeader>
-          <div className="bg-secondary/30 rounded-xl p-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">카드 번호</span>
-              <span className="font-mono font-medium">
-                {cardForm.number ? `•••• •••• •••• ${cardForm.number.replace(/\s/g, "").slice(-4)}` : "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">유효기간</span>
-              <span className="font-mono font-medium">
-                {cardForm.expiryMonth && cardForm.expiryYear ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}` : "—"}
-              </span>
-            </div>
-            <div className="border-t pt-3 flex justify-between items-center">
-              <span className="text-muted-foreground">결제 금액</span>
-              <span className="text-lg font-bold text-primary">{PLAN.price.toLocaleString()}원</span>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowPayConfirmDialog(false)}>취소</Button>
-            <Button onClick={handleConfirmPay}>결제하기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       </>
     );
   }
@@ -607,23 +427,9 @@ export default function Subscription() {
             <p className="text-sm text-muted-foreground mb-4">
               카드를 등록하면 즉시 {PLAN.price.toLocaleString()}원이 결제되고 구독이 시작됩니다.
             </p>
-            {!showCardForm && (
-              <Button onClick={handleRegisterCard} disabled={isRegisteringCard} variant={status === "pending_payment" ? "default" : "outline"}>
-                {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><CreditCard className="w-4 h-4 mr-2" />카드 등록하고 구독 시작</>}
-              </Button>
-            )}
-            {showCardForm && (
-              <div ref={cardFormRef}>
-                <CardForm
-                  form={cardForm}
-                  onChange={setCardForm}
-                  onSubmit={handleDirectCardSubmit}
-                  onCancel={() => setShowCardForm(false)}
-                  isLoading={isRegisteringCard}
-                  price={PLAN.price}
-                />
-              </div>
-            )}
+            <Button onClick={handleRegisterCard} disabled={isRegisteringCard} variant={status === "pending_payment" ? "default" : "outline"}>
+              {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><CreditCard className="w-4 h-4 mr-2" />카드 등록하고 구독 시작</>}
+            </Button>
           </div>
         )}
 
@@ -694,51 +500,6 @@ export default function Subscription() {
         )}
 
       </div>
-
-      {/* ── 결제 확인 다이얼로그 ──────────────────────────────────────────────── */}
-      <Dialog open={showPayConfirmDialog} onOpenChange={setShowPayConfirmDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>결제 확인</DialogTitle>
-            <DialogDescription>
-              아래 카드로 결제를 진행하시겠습니까?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-secondary/30 rounded-xl p-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">카드 번호</span>
-              <span className="font-mono font-medium">
-                {cardForm.number
-                  ? `•••• •••• •••• ${cardForm.number.replace(/\s/g, "").slice(-4)}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">유효기간</span>
-              <span className="font-mono font-medium">
-                {cardForm.expiryMonth && cardForm.expiryYear
-                  ? `${cardForm.expiryMonth} / ${cardForm.expiryYear}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="border-t pt-3 flex justify-between items-center">
-              <span className="text-muted-foreground">결제 금액</span>
-              <span className="text-lg font-bold text-primary">{PLAN.price.toLocaleString()}원</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            결제 후 매월 자동으로 갱신됩니다. 언제든지 구독을 취소할 수 있습니다.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowPayConfirmDialog(false)}>
-              취소
-            </Button>
-            <Button onClick={handleConfirmPay}>
-              결제하기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ── 데모 카드 등록 다이얼로그 ─────────────────────────────────────────── */}
       <Dialog open={showDemoCardDialog} onOpenChange={setShowDemoCardDialog}>
