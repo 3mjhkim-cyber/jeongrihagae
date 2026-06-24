@@ -1891,7 +1891,7 @@ export async function registerRoutes(
             card: {
               credential: {
                 number: cardNumber.replace(/\D/g, ''),
-                expiryYear: expiryYear.slice(-2),
+                expiryYear: expiryYear.length === 2 ? `20${expiryYear}` : expiryYear,
                 expiryMonth,
                 birthOrBusinessRegistrationNumber: birth,
                 passwordTwoDigits,
