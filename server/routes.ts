@@ -1900,7 +1900,12 @@ export async function registerRoutes(
           },
           issueId,
           issueName: `스탠다드 플랜 구독 (월 ${PLAN_PRICE.toLocaleString()}원)`,
-          customer: { id: String(user.id) },
+          customer: {
+            id: String(user.id),
+            name: user.name || user.email,
+            email: user.email,
+            phoneNumber: user.phone || undefined,
+          },
         }),
       });
 
