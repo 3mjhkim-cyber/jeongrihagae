@@ -181,6 +181,12 @@ export default function Subscription() {
         billingKeyMethod: "CARD",
         issueId,
         issueName: "스탠다드 플랜 구독",
+        customer: {
+          customerId: String(user.id),
+          fullName: (user as any).shopName || user.email,
+          email: user.email,
+          phoneNumber: (user as any).phone || undefined,
+        },
       });
       if (!response || response.code) {
         throw new Error((response as any)?.message || "카드 등록이 취소되었습니다.");
