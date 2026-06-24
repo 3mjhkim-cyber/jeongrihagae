@@ -1892,14 +1892,14 @@ export async function registerRoutes(
               credential: {
                 number: cardNumber.replace(/\D/g, ''),
                 expiryYear: expiryYear.length === 2 ? `20${expiryYear}` : expiryYear,
-                expiryMonth,
+                expiryMonth: expiryMonth.padStart(2, '0'),
                 birthOrBusinessRegistrationNumber: birth,
                 passwordTwoDigits,
               },
             },
           },
           issueId,
-          issueName: `스탠다드 플랜 구독 (월 ${PLAN_PRICE.toLocaleString()}원)`,
+          issueName: `스탠다드 플랜 구독`,
           customer: {
             id: String(user.id),
             name: user.name || user.email,
