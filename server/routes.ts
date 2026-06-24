@@ -1889,11 +1889,13 @@ export async function registerRoutes(
           channelKey,
           method: {
             card: {
-              cardNumber: cardNumber.replace(/\D/g, ''),
-              expiryYear: expiryYear.slice(-2),
-              expiryMonth,
-              birthOrBusinessRegistrationNumber: birth,
-              passwordTwoDigits,
+              credential: {
+                number: cardNumber.replace(/\D/g, ''),
+                expiryYear: expiryYear.slice(-2),
+                expiryMonth,
+                birthOrBusinessRegistrationNumber: birth,
+                passwordTwoDigits,
+              },
             },
           },
           issueId,
