@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -152,14 +154,14 @@
 
   body {
     @apply antialiased bg-background text-foreground;
-    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    font-family: 'Gaegu', sans-serif;
     line-height: 1.75;
     background-color: #FEFAF5;
   }
 
   h1, h2, h3 {
-    font-family: 'Stylish', sans-serif;
-    font-weight: 400;
+    font-family: 'Gaegu', sans-serif;
+    font-weight: 700;
     line-height: 1.35;
   }
 }
