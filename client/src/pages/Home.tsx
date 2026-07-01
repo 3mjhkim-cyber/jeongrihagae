@@ -532,18 +532,12 @@ function HeroSection() {
         .hs-content {
           position: relative;
           z-index: 2;
-          flex: 1;
-          max-width: 560px;
-          padding: 60px 1rem 60px 1rem;
+          width: 100%;
+          padding: 60px 1.5rem;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-        }
-        @media (min-width: 640px) {
-          .hs-content { padding-left: 1.5rem; }
-        }
-        @media (min-width: 1024px) {
-          .hs-content { padding-left: 2.5rem; }
+          align-items: center;
+          text-align: center;
         }
         .hs-badge {
           display: inline-block;
@@ -608,7 +602,7 @@ function HeroSection() {
         .hs-cta {
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
         }
         .hs-btn {
