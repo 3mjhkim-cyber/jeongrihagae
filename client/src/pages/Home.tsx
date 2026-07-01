@@ -452,8 +452,6 @@ function HeroSection() {
 
       {/* ── 텍스트 콘텐츠 ── */}
       <div className="hs-content">
-        <span className="hs-badge">반려동물 미용샵 토탈 솔루션</span>
-
         <div className="hs-brand">
           <div className="hs-brand-icon">
             <Scissors style={{ width: "28px", height: "28px", color: "white" }} />
@@ -536,10 +534,19 @@ function HeroSection() {
           z-index: 2;
           flex: 1;
           max-width: 560px;
-          padding: 80px 32px 80px 80px;
+          padding: 80px 32px 80px 1rem;
           display: flex;
           flex-direction: column;
           align-items: flex-start;
+        }
+        @media (min-width: 640px) {
+          .hs-content { padding-left: 1.5rem; }
+        }
+        @media (min-width: 1024px) {
+          .hs-content { padding-left: 2rem; }
+        }
+        @media (min-width: 1280px) {
+          .hs-content { padding-left: calc((100vw - 1280px) / 2 + 1rem); }
         }
         .hs-badge {
           display: inline-block;
