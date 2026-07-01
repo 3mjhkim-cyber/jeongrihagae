@@ -575,7 +575,7 @@ function HeroSection() {
           font-weight: 900;
           color: #3B5BDB;
           letter-spacing: -0.02em;
-          font-family: 'Gaegu', sans-serif;
+          font-family: 'Stylish', sans-serif;
           white-space: nowrap;
         }
         .hs-heading {
