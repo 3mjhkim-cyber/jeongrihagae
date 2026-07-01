@@ -539,10 +539,11 @@ function HeroSection() {
           flex-direction: column;
           align-items: flex-start;
         }
-        @media (min-width: 1280px) {
-          .hs-content {
-            padding-left: max(1rem, calc((100vw - 1280px) / 2 + 1rem));
-          }
+        @media (min-width: 640px) {
+          .hs-content { padding-left: 1.5rem; }
+        }
+        @media (min-width: 1024px) {
+          .hs-content { padding-left: 2.5rem; }
         }
         .hs-badge {
           display: inline-block;
