@@ -534,19 +534,15 @@ function HeroSection() {
           z-index: 2;
           flex: 1;
           max-width: 560px;
-          padding: 80px 32px 80px 1rem;
+          padding: 60px 1rem 60px 1rem;
           display: flex;
           flex-direction: column;
           align-items: flex-start;
         }
-        @media (min-width: 640px) {
-          .hs-content { padding-left: 1.5rem; }
-        }
-        @media (min-width: 1024px) {
-          .hs-content { padding-left: 2rem; }
-        }
         @media (min-width: 1280px) {
-          .hs-content { padding-left: calc((100vw - 1280px) / 2 + 1rem); }
+          .hs-content {
+            padding-left: max(1rem, calc((100vw - 1280px) / 2 + 1rem));
+          }
         }
         .hs-badge {
           display: inline-block;
@@ -575,11 +571,12 @@ function HeroSection() {
           flex-shrink: 0;
         }
         .hs-brand-name {
-          font-size: clamp(2.2rem, 4vw, 3.5rem);
+          font-size: clamp(1.6rem, 3vw, 2.8rem);
           font-weight: 900;
           color: #3B5BDB;
-          letter-spacing: -0.035em;
+          letter-spacing: -0.02em;
           font-family: 'Gaegu', sans-serif;
+          white-space: nowrap;
         }
         .hs-heading {
           font-size: clamp(1.6rem, 2.8vw, 2.5rem);

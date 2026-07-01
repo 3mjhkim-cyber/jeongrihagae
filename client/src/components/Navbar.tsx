@@ -15,7 +15,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-white/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="w-full px-4 xl:px-[max(1rem,calc((100vw-1280px)/2+1rem))] h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group cursor-pointer">
           <div className="bg-primary/20 p-2 rounded-full group-hover:bg-primary/30 transition-colors">
             <Scissors className="h-6 w-6 text-primary group-hover:rotate-12 transition-transform" />
