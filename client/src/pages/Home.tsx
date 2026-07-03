@@ -294,71 +294,172 @@ function CalendarMockup() {
 const FEATURES = [
   {
     id: "calendar",
-    icon: <CalendarDays className="w-6 h-6" />,
+    icon: <CalendarDays className="w-4 h-4" />,
     bigIcon: <CalendarDays className="w-9 h-9" />,
     title: "예약 캘린더",
     color: "#3B5BDB",
     pastel: "#EEF2FF",
+    shortDesc: "일·주·월 보기, 예약 현황 한눈에",
     panelTitle: "하루 예약을 한눈에 파악하세요",
     desc: "일·주·월 뷰를 자유롭게 전환하며 예약 현황을 확인할 수 있어요. 온라인 예약 링크를 생성해 네이버 플레이스, 카카오맵, 인스타그램 어디서든 바로 접수 가능해요.",
     tags: ["일/주/월 뷰 전환", "온라인 예약 접수", "예약 확정·취소 관리", "예약금 설정"],
+    mockup: (
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 10px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 9, fontWeight: 700, color: "#3B5BDB" }}>
+          <span>2026년 7월</span><span style={{ color: "#9CA3AF" }}>◀ ▶</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+          {["월","화","수","목","금","토","일"].map(d => <div key={d} style={{ fontSize: 7, color: "#9CA3AF", textAlign: "center" }}>{d}</div>)}
+          {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(n => (
+            <div key={n} style={{ height: 18, borderRadius: 4, fontSize: 8, display: "flex", alignItems: "center", justifyContent: "center",
+              background: n === 3 ? "#3B5BDB" : [2,4,8,11].includes(n) ? "#EEF2FF" : "transparent",
+              color: n === 3 ? "white" : [2,4,8,11].includes(n) ? "#3B5BDB" : "#6B7280",
+              fontWeight: [2,3,4,8,11].includes(n) ? 700 : 400 }}>{n}</div>
+          ))}
+        </div>
+      </div>
+    ),
   },
   {
     id: "customers",
-    icon: <Users className="w-6 h-6" />,
+    icon: <Users className="w-4 h-4" />,
     bigIcon: <Users className="w-9 h-9" />,
     title: "고객 관리",
     color: "#5BB87A",
     pastel: "#EDFBF1",
+    shortDesc: "강아지별 이력·방문 주기 한눈에",
     panelTitle: "모든 채널 고객을 한곳에서",
     desc: "반짝·네이버·카카오 등 어느 플랫폼에서 온 손님이든 정리하개에서 통합 관리해요. 강아지별 미용 이력, 특이사항, 방문 주기를 한눈에 볼 수 있어요.",
     tags: ["VIP 자동 분류", "60일 미방문 알림", "강아지별 미용 이력", "전채널 통합 관리"],
+    mockup: (
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(91,184,122,0.1)" }}>
+        {[
+          { name: "최미연 · 뭉뭉이", sub: "말티즈 · 8회 방문", badge: "VIP", bc: "#F3E8FF", tc: "#7C3AED", av: "#BFDBFE" },
+          { name: "김민수 · 콩이", sub: "포메 · 65일 미방문", badge: "이탈위험", bc: "#FEE2E2", tc: "#DC2626", av: "#FDE68A" },
+          { name: "박서연 · 하루", sub: "비숑 · 3회 방문", badge: "", bc: "", tc: "", av: "#A7F3D0" },
+        ].map((c, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none" }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", background: c.av, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 8, fontWeight: 600, color: "#1A1A2E" }}>{c.name}</div>
+              <div style={{ fontSize: 7, color: "#9CA3AF" }}>{c.sub}</div>
+            </div>
+            {c.badge && <div style={{ fontSize: 6, fontWeight: 700, padding: "2px 5px", borderRadius: 99, background: c.bc, color: c.tc }}>{c.badge}</div>}
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     id: "revenue",
-    icon: <BarChart3 className="w-6 h-6" />,
+    icon: <BarChart3 className="w-4 h-4" />,
     bigIcon: <BarChart3 className="w-9 h-9" />,
     title: "매출 대시보드",
     color: "#E8A020",
     pastel: "#FFF8EC",
+    shortDesc: "매출·단가·재방문율 한눈에",
     panelTitle: "숫자가 아닌 인사이트를 드려요",
     desc: "이번 달 매출, 평균 단가, 재방문율을 한눈에 확인하고 어떤 고객을 잡아야 할지 알려줘요. 60일 이상 미방문 고객을 자동으로 감지해 리텐션을 높여요.",
     tags: ["월 매출 요약", "재방문·신규 비율", "미방문 고객 감지", "전월 대비 분석"],
+    mockup: (
+      <div style={{ background: "white", borderRadius: 10, padding: "10px 12px", width: "100%", boxShadow: "0 2px 12px rgba(232,160,32,0.1)" }}>
+        <div style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>이번 달 매출</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A2E", marginBottom: 8 }}>6,100,000원 <span style={{ fontSize: 9, color: "#5BB87A", fontWeight: 600 }}>▲ +14%</span></div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 44 }}>
+          {[30, 50, 40, 65, 55, 85, 45].map((h, i) => (
+            <div key={i} style={{ flex: 1, borderRadius: "3px 3px 0 0", height: `${h}%`, background: i === 5 ? "#E8A020" : "#FEE9BC" }} />
+          ))}
+        </div>
+      </div>
+    ),
   },
   {
     id: "kakao",
-    icon: <MessageSquare className="w-6 h-6" />,
+    icon: <MessageSquare className="w-4 h-4" />,
     bigIcon: <MessageSquare className="w-9 h-9" />,
     title: "카카오 알림톡",
     color: "#D4A000",
     pastel: "#FFFBEB",
+    shortDesc: "예약 확정·리마인더 자동 발송",
     panelTitle: "노쇼 걱정 없이 자동으로",
     desc: "예약 확정 시 확인 메시지, 전날 리마인더까지 자동으로 발송돼요. 샵 이름으로 발송되어 고객에게 신뢰감을 주고, 노쇼를 확실히 줄일 수 있어요.",
     tags: ["예약 확인 자동 발송", "전날 리마인더", "샵 브랜드 발송", "발송 이력 관리"],
+    mockup: (
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6 }}>
+        {[
+          { text: "정리하개 강남점 예약이 확정되었습니다 🐾", time: "오전 10:02", read: true },
+          { text: "내일 오후 2시 예약 잊지 마세요!", time: "오후 6:00", read: false },
+        ].map((m, i) => (
+          <div key={i} style={{ background: "white", borderRadius: 10, padding: "7px 10px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
+            <div style={{ fontSize: 7, fontWeight: 700, color: "#D4A000", marginBottom: 3 }}>정리하개 강남점</div>
+            <div style={{ fontSize: 8, color: "#374151", lineHeight: 1.4 }}>{m.text}</div>
+            <div style={{ fontSize: 7, color: "#9CA3AF", marginTop: 3, display: "flex", justifyContent: "space-between" }}>
+              <span>{m.time}</span>
+              <span style={{ color: m.read ? "#3B5BDB" : "#D1D5DB" }}>{m.read ? "읽음" : "전송됨"}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     id: "services",
-    icon: <Scissors className="w-6 h-6" />,
+    icon: <Scissors className="w-4 h-4" />,
     bigIcon: <Scissors className="w-9 h-9" />,
     title: "서비스 관리",
     color: "#6B5FBF",
     pastel: "#F3F0FF",
+    shortDesc: "메뉴·가격·소요시간 자유롭게 설정",
     panelTitle: "메뉴 구성을 자유롭게 설정해요",
     desc: "전체 미용, 부분 미용, 목욕 등 서비스별로 가격과 소요 시간을 직접 설정해요. 예약 시 자동으로 소요 시간이 반영되어 일정 충돌을 방지해요.",
     tags: ["서비스별 가격 설정", "소요 시간 자동 반영", "부분 미용·목욕 분리", "메뉴 추가·수정 자유"],
+    mockup: (
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(107,95,191,0.1)" }}>
+        {[
+          { name: "전체 미용", time: "90분", price: "70,000원" },
+          { name: "부분 미용", time: "60분", price: "45,000원" },
+          { name: "목욕·드라이", time: "45분", price: "30,000원" },
+        ].map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none", gap: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6B5FBF", flexShrink: 0 }} />
+            <div style={{ flex: 1, fontSize: 8, fontWeight: 600, color: "#1A1A2E" }}>{s.name}</div>
+            <div style={{ fontSize: 7, color: "#9CA3AF" }}>{s.time}</div>
+            <div style={{ fontSize: 8, fontWeight: 700, color: "#6B5FBF" }}>{s.price}</div>
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     id: "link",
-    icon: <Link2 className="w-6 h-6" />,
+    icon: <Link2 className="w-4 h-4" />,
     bigIcon: <Link2 className="w-9 h-9" />,
     title: "예약 링크",
     color: "#E05580",
     pastel: "#FFF0F5",
+    shortDesc: "링크 하나로 어디서든 예약 접수",
     panelTitle: "링크 하나로 어디서든 예약 접수",
     desc: "정리하개에서 생성한 예약 링크를 네이버 플레이스, 카카오맵, 인스타그램 바이오 등 어디든 붙여넣으면 바로 예약 접수가 가능해요.",
     tags: ["링크 1개로 통합 접수", "네이버·카카오 연동", "인스타 바이오 활용", "QR코드 생성"],
+    mockup: (
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 5, alignItems: "center" }}>
+        <div style={{ background: "white", borderRadius: 8, padding: "6px 10px", width: "100%", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 4, background: "#FFF0F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>🔗</div>
+          <div style={{ flex: 1, fontSize: 8, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>jeongrihagae.com/book/강남점</div>
+          <div style={{ fontSize: 7, fontWeight: 700, color: "#E05580", background: "#FFF0F5", borderRadius: 4, padding: "2px 5px" }}>복사</div>
+        </div>
+        <div style={{ display: "flex", gap: 5, width: "100%" }}>
+          {["네이버", "카카오", "인스타"].map((p, i) => (
+            <div key={i} style={{ flex: 1, background: "white", borderRadius: 6, padding: "5px 4px", textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: 7, fontWeight: 600, color: "#374151" }}>{p}</div>
+              <div style={{ fontSize: 6, color: "#9CA3AF" }}>연동됨</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
   },
-] as const;
+];
 
 // ─── Hero Slideshow ─────────────────────────────────────────────────────────
 const HERO_IMAGES = [
@@ -703,7 +804,7 @@ function FeatureSection() {
                 onMouseEnter={() => setHoveredId(f.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleClick(f.id)}
-                className="fade-up bg-white rounded-2xl border p-6 shadow-sm transition-all duration-200 select-none"
+                className="fade-up bg-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-200 select-none"
                 style={{
                   transitionDelay: `${fi * 0.08}s`,
                   borderColor: isActive ? f.color : "#f3f4f6",
@@ -714,30 +815,20 @@ function FeatureSection() {
                   cursor: "pointer",
                 }}
               >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200"
-                  style={{
-                    backgroundColor: f.pastel,
-                    color: f.color,
-                    transform: isActive ? "scale(1.1)" : "scale(1)",
-                  }}
-                >
-                  {f.icon}
+                {/* 목업 미리보기 영역 */}
+                <div className="h-36 flex items-center justify-center p-3" style={{ backgroundColor: f.pastel }}>
+                  {f.mockup}
                 </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-bold text-gray-900">{f.title}</h3>
-                  {isPinned && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                      style={{ backgroundColor: f.pastel, color: f.color }}
-                    >
-                      고정됨
-                    </span>
-                  )}
+                {/* 카드 텍스트 */}
+                <div className="p-5">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: f.pastel, color: f.color }}>
+                      {f.icon}
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm">{f.title}</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">{f.shortDesc}</p>
                 </div>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  {f.desc}
-                </p>
               </div>
             );
           })}
