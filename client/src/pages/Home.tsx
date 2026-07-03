@@ -332,11 +332,11 @@ const FEATURES = [
     desc: "반짝·네이버·카카오 등 어느 플랫폼에서 온 손님이든 정리하개에서 통합 관리해요. 강아지별 미용 이력, 특이사항, 방문 주기를 한눈에 볼 수 있어요.",
     tags: ["VIP 자동 분류", "60일 미방문 알림", "강아지별 미용 이력", "전채널 통합 관리"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(91,184,122,0.1)" }}>
         {[
-          { name: "최미연 · 뭉뭉이", sub: "말티즈 · 8회 방문", badge: "VIP", bc: "#EEF2FF", tc: "#3B5BDB", av: "#C7D2FE" },
-          { name: "김민수 · 콩이", sub: "포메 · 65일 미방문", badge: "이탈위험", bc: "#EEF2FF", tc: "#3B5BDB", av: "#A5B4FC" },
-          { name: "박서연 · 하루", sub: "비숑 · 3회 방문", badge: "", bc: "", tc: "", av: "#E0E7FF" },
+          { name: "최미연 · 뭉뭉이", sub: "말티즈 · 8회 방문", badge: "VIP", bc: "#F3E8FF", tc: "#7C3AED", av: "#BFDBFE" },
+          { name: "김민수 · 콩이", sub: "포메 · 65일 미방문", badge: "이탈위험", bc: "#FEE2E2", tc: "#DC2626", av: "#FDE68A" },
+          { name: "박서연 · 하루", sub: "비숑 · 3회 방문", badge: "", bc: "", tc: "", av: "#A7F3D0" },
         ].map((c, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none" }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", background: c.av, flexShrink: 0 }} />
@@ -362,12 +362,12 @@ const FEATURES = [
     desc: "이번 달 매출, 평균 단가, 재방문율을 한눈에 확인하고 어떤 고객을 잡아야 할지 알려줘요. 60일 이상 미방문 고객을 자동으로 감지해 리텐션을 높여요.",
     tags: ["월 매출 요약", "재방문·신규 비율", "미방문 고객 감지", "전월 대비 분석"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "10px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "10px 12px", width: "100%", boxShadow: "0 2px 12px rgba(232,160,32,0.1)" }}>
         <div style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>이번 달 매출</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A2E", marginBottom: 8 }}>6,100,000원 <span style={{ fontSize: 9, color: "#3B5BDB", fontWeight: 600 }}>▲ +14%</span></div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A2E", marginBottom: 8 }}>6,100,000원 <span style={{ fontSize: 9, color: "#5BB87A", fontWeight: 600 }}>▲ +14%</span></div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 44 }}>
           {[30, 50, 40, 65, 55, 85, 45].map((h, i) => (
-            <div key={i} style={{ flex: 1, borderRadius: "3px 3px 0 0", height: `${h}%`, background: i === 5 ? "#3B5BDB" : "#C7D2FE" }} />
+            <div key={i} style={{ flex: 1, borderRadius: "3px 3px 0 0", height: `${h}%`, background: i === 5 ? "#E8A020" : "#FEE9BC" }} />
           ))}
         </div>
       </div>
@@ -391,7 +391,7 @@ const FEATURES = [
           { text: "내일 오후 2시 예약 잊지 마세요!", time: "오후 6:00", read: false },
         ].map((m, i) => (
           <div key={i} style={{ background: "white", borderRadius: 10, padding: "7px 10px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
-            <div style={{ fontSize: 7, fontWeight: 700, color: "#3B5BDB", marginBottom: 3 }}>정리하개 강남점</div>
+            <div style={{ fontSize: 7, fontWeight: 700, color: "#D4A000", marginBottom: 3 }}>정리하개 강남점</div>
             <div style={{ fontSize: 8, color: "#374151", lineHeight: 1.4 }}>{m.text}</div>
             <div style={{ fontSize: 7, color: "#9CA3AF", marginTop: 3, display: "flex", justifyContent: "space-between" }}>
               <span>{m.time}</span>
@@ -414,17 +414,17 @@ const FEATURES = [
     desc: "전체 미용, 부분 미용, 목욕 등 서비스별로 가격과 소요 시간을 직접 설정해요. 예약 시 자동으로 소요 시간이 반영되어 일정 충돌을 방지해요.",
     tags: ["서비스별 가격 설정", "소요 시간 자동 반영", "부분 미용·목욕 분리", "메뉴 추가·수정 자유"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(107,95,191,0.1)" }}>
         {[
           { name: "전체 미용", time: "90분", price: "70,000원" },
           { name: "부분 미용", time: "60분", price: "45,000원" },
           { name: "목욕·드라이", time: "45분", price: "30,000원" },
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none", gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3B5BDB", flexShrink: 0 }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6B5FBF", flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 8, fontWeight: 600, color: "#1A1A2E" }}>{s.name}</div>
             <div style={{ fontSize: 7, color: "#9CA3AF" }}>{s.time}</div>
-            <div style={{ fontSize: 8, fontWeight: 700, color: "#3B5BDB" }}>{s.price}</div>
+            <div style={{ fontSize: 8, fontWeight: 700, color: "#6B5FBF" }}>{s.price}</div>
           </div>
         ))}
       </div>
@@ -444,9 +444,9 @@ const FEATURES = [
     mockup: (
       <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 5, alignItems: "center" }}>
         <div style={{ background: "white", borderRadius: 8, padding: "6px 10px", width: "100%", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 16, height: 16, borderRadius: 4, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>🔗</div>
+          <div style={{ width: 16, height: 16, borderRadius: 4, background: "#FFF0F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>🔗</div>
           <div style={{ flex: 1, fontSize: 8, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>jeongrihagae.com/book/강남점</div>
-          <div style={{ fontSize: 7, fontWeight: 700, color: "#3B5BDB", background: "#EEF2FF", borderRadius: 4, padding: "2px 5px" }}>복사</div>
+          <div style={{ fontSize: 7, fontWeight: 700, color: "#E05580", background: "#FFF0F5", borderRadius: 4, padding: "2px 5px" }}>복사</div>
         </div>
         <div style={{ display: "flex", gap: 5, width: "100%" }}>
           {["네이버", "카카오", "인스타"].map((p, i) => (
@@ -843,8 +843,8 @@ function FeatureSection() {
             <div
               className="mt-5 rounded-2xl border p-6 md:p-8"
               style={{
-                borderColor: active.color,
-                backgroundColor: active.pastel,
+                borderColor: "#3B5BDB",
+                backgroundColor: "#EEF2FF",
               }}
             >
               <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
@@ -852,13 +852,13 @@ function FeatureSection() {
                 <div className="flex-1 min-w-0">
                   <span
                     className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-3"
-                    style={{ backgroundColor: `${active.color}18`, color: active.color }}
+                    style={{ backgroundColor: "#3B5BDB18", color: "#3B5BDB" }}
                   >
                     {active.title}
                   </span>
                   <h3
                     className="text-base md:text-lg font-bold mb-3"
-                    style={{ color: active.color }}
+                    style={{ color: "#3B5BDB" }}
                   >
                     {active.panelTitle}
                   </h3>
@@ -872,8 +872,8 @@ function FeatureSection() {
                         className="text-xs px-2.5 py-1 rounded-full font-medium border"
                         style={{
                           backgroundColor: "white",
-                          color: active.color,
-                          borderColor: `${active.color}30`,
+                          color: "#3B5BDB",
+                          borderColor: "#3B5BDB30",
                         }}
                       >
                         {tag}
@@ -885,7 +885,7 @@ function FeatureSection() {
                 {/* Right: icon block */}
                 <div
                   className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center shadow-sm"
-                  style={{ backgroundColor: "white", color: active.color }}
+                  style={{ backgroundColor: "white", color: "#3B5BDB" }}
                 >
                   {active.bigIcon}
                 </div>
