@@ -325,18 +325,18 @@ const FEATURES = [
     icon: <Users className="w-4 h-4" />,
     bigIcon: <Users className="w-9 h-9" />,
     title: "고객 관리",
-    color: "#5BB87A",
-    pastel: "#EDFBF1",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
     shortDesc: "강아지별 이력·방문 주기 한눈에",
     panelTitle: "모든 채널 고객을 한곳에서",
     desc: "반짝·네이버·카카오 등 어느 플랫폼에서 온 손님이든 정리하개에서 통합 관리해요. 강아지별 미용 이력, 특이사항, 방문 주기를 한눈에 볼 수 있어요.",
     tags: ["VIP 자동 분류", "60일 미방문 알림", "강아지별 미용 이력", "전채널 통합 관리"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(91,184,122,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
         {[
-          { name: "최미연 · 뭉뭉이", sub: "말티즈 · 8회 방문", badge: "VIP", bc: "#F3E8FF", tc: "#7C3AED", av: "#BFDBFE" },
-          { name: "김민수 · 콩이", sub: "포메 · 65일 미방문", badge: "이탈위험", bc: "#FEE2E2", tc: "#DC2626", av: "#FDE68A" },
-          { name: "박서연 · 하루", sub: "비숑 · 3회 방문", badge: "", bc: "", tc: "", av: "#A7F3D0" },
+          { name: "최미연 · 뭉뭉이", sub: "말티즈 · 8회 방문", badge: "VIP", bc: "#EEF2FF", tc: "#3B5BDB", av: "#C7D2FE" },
+          { name: "김민수 · 콩이", sub: "포메 · 65일 미방문", badge: "이탈위험", bc: "#EEF2FF", tc: "#3B5BDB", av: "#A5B4FC" },
+          { name: "박서연 · 하루", sub: "비숑 · 3회 방문", badge: "", bc: "", tc: "", av: "#E0E7FF" },
         ].map((c, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none" }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", background: c.av, flexShrink: 0 }} />
@@ -355,19 +355,19 @@ const FEATURES = [
     icon: <BarChart3 className="w-4 h-4" />,
     bigIcon: <BarChart3 className="w-9 h-9" />,
     title: "매출 대시보드",
-    color: "#E8A020",
-    pastel: "#FFF8EC",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
     shortDesc: "매출·단가·재방문율 한눈에",
     panelTitle: "숫자가 아닌 인사이트를 드려요",
     desc: "이번 달 매출, 평균 단가, 재방문율을 한눈에 확인하고 어떤 고객을 잡아야 할지 알려줘요. 60일 이상 미방문 고객을 자동으로 감지해 리텐션을 높여요.",
     tags: ["월 매출 요약", "재방문·신규 비율", "미방문 고객 감지", "전월 대비 분석"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "10px 12px", width: "100%", boxShadow: "0 2px 12px rgba(232,160,32,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "10px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
         <div style={{ fontSize: 8, color: "#9CA3AF", marginBottom: 2 }}>이번 달 매출</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A2E", marginBottom: 8 }}>6,100,000원 <span style={{ fontSize: 9, color: "#5BB87A", fontWeight: 600 }}>▲ +14%</span></div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#1A1A2E", marginBottom: 8 }}>6,100,000원 <span style={{ fontSize: 9, color: "#3B5BDB", fontWeight: 600 }}>▲ +14%</span></div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 44 }}>
           {[30, 50, 40, 65, 55, 85, 45].map((h, i) => (
-            <div key={i} style={{ flex: 1, borderRadius: "3px 3px 0 0", height: `${h}%`, background: i === 5 ? "#E8A020" : "#FEE9BC" }} />
+            <div key={i} style={{ flex: 1, borderRadius: "3px 3px 0 0", height: `${h}%`, background: i === 5 ? "#3B5BDB" : "#C7D2FE" }} />
           ))}
         </div>
       </div>
@@ -378,8 +378,8 @@ const FEATURES = [
     icon: <MessageSquare className="w-4 h-4" />,
     bigIcon: <MessageSquare className="w-9 h-9" />,
     title: "카카오 알림톡",
-    color: "#D4A000",
-    pastel: "#FFFBEB",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
     shortDesc: "예약 확정·리마인더 자동 발송",
     panelTitle: "노쇼 걱정 없이 자동으로",
     desc: "예약 확정 시 확인 메시지, 전날 리마인더까지 자동으로 발송돼요. 샵 이름으로 발송되어 고객에게 신뢰감을 주고, 노쇼를 확실히 줄일 수 있어요.",
@@ -391,7 +391,7 @@ const FEATURES = [
           { text: "내일 오후 2시 예약 잊지 마세요!", time: "오후 6:00", read: false },
         ].map((m, i) => (
           <div key={i} style={{ background: "white", borderRadius: 10, padding: "7px 10px", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
-            <div style={{ fontSize: 7, fontWeight: 700, color: "#D4A000", marginBottom: 3 }}>정리하개 강남점</div>
+            <div style={{ fontSize: 7, fontWeight: 700, color: "#3B5BDB", marginBottom: 3 }}>정리하개 강남점</div>
             <div style={{ fontSize: 8, color: "#374151", lineHeight: 1.4 }}>{m.text}</div>
             <div style={{ fontSize: 7, color: "#9CA3AF", marginTop: 3, display: "flex", justifyContent: "space-between" }}>
               <span>{m.time}</span>
@@ -407,24 +407,24 @@ const FEATURES = [
     icon: <Scissors className="w-4 h-4" />,
     bigIcon: <Scissors className="w-9 h-9" />,
     title: "서비스 관리",
-    color: "#6B5FBF",
-    pastel: "#F3F0FF",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
     shortDesc: "메뉴·가격·소요시간 자유롭게 설정",
     panelTitle: "메뉴 구성을 자유롭게 설정해요",
     desc: "전체 미용, 부분 미용, 목욕 등 서비스별로 가격과 소요 시간을 직접 설정해요. 예약 시 자동으로 소요 시간이 반영되어 일정 충돌을 방지해요.",
     tags: ["서비스별 가격 설정", "소요 시간 자동 반영", "부분 미용·목욕 분리", "메뉴 추가·수정 자유"],
     mockup: (
-      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(107,95,191,0.1)" }}>
+      <div style={{ background: "white", borderRadius: 10, padding: "8px 12px", width: "100%", boxShadow: "0 2px 12px rgba(59,91,219,0.1)" }}>
         {[
           { name: "전체 미용", time: "90분", price: "70,000원" },
           { name: "부분 미용", time: "60분", price: "45,000원" },
           { name: "목욕·드라이", time: "45분", price: "30,000원" },
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", padding: "5px 0", borderBottom: i < 2 ? "1px solid #F3F4F6" : "none", gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6B5FBF", flexShrink: 0 }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3B5BDB", flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 8, fontWeight: 600, color: "#1A1A2E" }}>{s.name}</div>
             <div style={{ fontSize: 7, color: "#9CA3AF" }}>{s.time}</div>
-            <div style={{ fontSize: 8, fontWeight: 700, color: "#6B5FBF" }}>{s.price}</div>
+            <div style={{ fontSize: 8, fontWeight: 700, color: "#3B5BDB" }}>{s.price}</div>
           </div>
         ))}
       </div>
@@ -435,8 +435,8 @@ const FEATURES = [
     icon: <Link2 className="w-4 h-4" />,
     bigIcon: <Link2 className="w-9 h-9" />,
     title: "예약 링크",
-    color: "#E05580",
-    pastel: "#FFF0F5",
+    color: "#3B5BDB",
+    pastel: "#EEF2FF",
     shortDesc: "링크 하나로 어디서든 예약 접수",
     panelTitle: "링크 하나로 어디서든 예약 접수",
     desc: "정리하개에서 생성한 예약 링크를 네이버 플레이스, 카카오맵, 인스타그램 바이오 등 어디든 붙여넣으면 바로 예약 접수가 가능해요.",
@@ -444,9 +444,9 @@ const FEATURES = [
     mockup: (
       <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 5, alignItems: "center" }}>
         <div style={{ background: "white", borderRadius: 8, padding: "6px 10px", width: "100%", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 16, height: 16, borderRadius: 4, background: "#FFF0F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>🔗</div>
+          <div style={{ width: 16, height: 16, borderRadius: 4, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>🔗</div>
           <div style={{ flex: 1, fontSize: 8, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>jeongrihagae.com/book/강남점</div>
-          <div style={{ fontSize: 7, fontWeight: 700, color: "#E05580", background: "#FFF0F5", borderRadius: 4, padding: "2px 5px" }}>복사</div>
+          <div style={{ fontSize: 7, fontWeight: 700, color: "#3B5BDB", background: "#EEF2FF", borderRadius: 4, padding: "2px 5px" }}>복사</div>
         </div>
         <div style={{ display: "flex", gap: 5, width: "100%" }}>
           {["네이버", "카카오", "인스타"].map((p, i) => (
