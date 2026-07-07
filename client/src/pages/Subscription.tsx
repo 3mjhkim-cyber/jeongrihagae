@@ -178,7 +178,8 @@ export default function Subscription() {
       const response = await PortOne.requestIssueBillingKey({
         storeId: import.meta.env.VITE_PORTONE_STORE_ID,
         channelKey: import.meta.env.VITE_PORTONE_CHANNEL_KEY,
-        billingKeyMethod: "CARD",
+        billingKeyMethod: "EASY_PAY",
+        easyPay: { easyPayProvider: "KAKAOPAY" },
         issueId,
         issueName: "스탠다드 플랜 구독",
         customer: {
