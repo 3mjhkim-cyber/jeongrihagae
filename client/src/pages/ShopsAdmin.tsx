@@ -56,7 +56,13 @@ import type { Shop } from "@shared/schema";
  *
  * ※ shop.id(DB 내부 숫자 일련번호)는 사용자에게 노출하지 않는다.
  */
-type ShopWithOwner = Shop & { ownerEmail: string | null; trialStartDate?: string | null; trialEndDate?: string | null };
+type ShopWithOwner = Shop & {
+  ownerEmail: string | null;
+  trialStartDate?: string | null;
+  trialEndDate?: string | null;
+  cancelReason?: string | null;
+  cancelNote?: string | null;
+};
 
 type ShopFilter = "all" | "active" | "inactive";
 
@@ -565,6 +571,18 @@ export default function ShopsAdmin() {
                     <div>
                       <p className="text-muted-foreground text-xs mb-0.5">무료체험 만료</p>
                       <p className="font-medium">{fmtDate(detailShop.trialEndDate)}</p>
+                    </div>
+                  )}
+                  {detailShop.cancelReason && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs mb-0.5">최근 취소 사유</p>
+                      <p className="font-medium">{detailShop.cancelReason}</p>
+                    </div>
+                  )}
+                  {detailShop.cancelNote && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs mb-0.5">취소 시 추가 의견</p>
+                      <p className="font-medium whitespace-pre-wrap">{detailShop.cancelNote}</p>
                     </div>
                   )}
                 </div>

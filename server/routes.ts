@@ -889,6 +889,8 @@ export async function registerRoutes(
         ownerEmail: ownerMap[s.id] ?? null,
         trialStartDate: sub?.trialStartDate ?? null,
         trialEndDate: sub?.trialEndDate ?? null,
+        cancelReason: sub?.cancelReason ?? null,
+        cancelNote: sub?.cancelNote ?? null,
       };
     });
     res.json(result);
@@ -1999,6 +2001,7 @@ export async function registerRoutes(
    */
   app.post('/api/subscription/cancel', requireAuth, async (req, res) => {
     const user = req.user as any;
+    const { reason, note } = req.body as { reason?: unknown; note?: unknown };
     const sub = await storage.getUserSubscription(user.id);
     if (!sub) {
       return res.status(404).json({ message: '구독 정보가 없습니다.' });
@@ -2010,6 +2013,39 @@ export async function registerRoutes(
     // nextBillingDate는 유지: 현재 기간 종료일로 사용 (미들웨어에서 접근 허용 기준)
     const updated = await storage.updateUserSubscription(sub.id, {
       status: 'cancelled',
+      cancelReason: typeof reason === 'string' ? reason.slice(0, 200) : null,
+      cancelNote: typeof note === 'string' ? note.slice(0, 1000) : null,
+    });
+    res.json({ subscription: updated });
+  });
+
+  /**
+   * POST /api/subscription/reactivate
+   * "해지 취소": 아직 남은 이용 기간(trialEndDate 또는 nextBillingDate) 안이면
+   * 재결제 없이 status만 되돌린다. 이미 기간이 지났다면 재결제가 필요하므로 거부.
+   */
+  app.post('/api/subscription/reactivate', requireAuth, async (req, res) => {
+    const user = req.user as any;
+    const sub = await storage.getUserSubscription(user.id);
+    if (!sub) {
+      return res.status(404).json({ message: '구독 정보가 없습니다.' });
+    }
+    if (sub.status !== 'cancelled') {
+      return res.json({ subscription: sub, alreadyActive: true });
+    }
+
+    const now = new Date();
+    const trialStillValid = !!sub.trialEndDate && new Date(sub.trialEndDate) > now;
+    const billingStillValid = !!sub.nextBillingDate && new Date(sub.nextBillingDate) > now;
+
+    if (!trialStillValid && !billingStillValid) {
+      return res.status(400).json({
+        message: '이용 기간이 이미 만료되었습니다. 다시 결제해서 구독을 시작해주세요.',
+      });
+    }
+
+    const updated = await storage.updateUserSubscription(sub.id, {
+      status: trialStillValid ? 'trialing' : 'active',
     });
     res.json({ subscription: updated });
   });

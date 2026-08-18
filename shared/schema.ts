@@ -133,6 +133,8 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   nextBillingDate: timestamp("next_billing_date"), // 다음 정기결제일 (nullable)
   lastBillingAt: timestamp("last_billing_at"),     // 마지막 성공 결제일시 (nullable)
   failCount: integer("fail_count").default(0).notNull(),
+  cancelReason: text("cancel_reason"),        // 가장 최근 취소 사유 (nullable)
+  cancelNote: text("cancel_note"),            // 가장 최근 취소 추가 의견 (nullable)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
