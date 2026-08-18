@@ -154,6 +154,21 @@ export default function Subscription() {
       toast({ title: "해지 실패", variant: "destructive" }),
   });
 
+  const reactivateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/subscription/reactivate", {});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "재개에 실패했습니다.");
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/subscription"] });
+      toast({ title: "구독이 재개되었습니다.", description: "해지가 취소되어 계속 이용하실 수 있어요." });
+    },
+    onError: (err: Error) =>
+      toast({ title: "재개 실패", description: err.message, variant: "destructive" }),
+  });
+
   const attachAndPay = async (billingKey: string) => {
     setIsRegisteringCard(true);
     try {
@@ -234,6 +249,18 @@ export default function Subscription() {
       ? (shopStatus as SubStatus)
       : rawStatus;
 
+  // 해지했더라도 이미 낸 기간(trialEndDate 또는 nextBillingDate)이 남아있으면
+  // 재결제 없이 "재개"만 하면 되는 유예 기간으로 취급한다.
+  const now = new Date();
+  const cancelledStillInGrace =
+    status === "cancelled" &&
+    ((!!sub?.trialEndDate && new Date(sub.trialEndDate) > now) ||
+      (!!sub?.nextBillingDate && new Date(sub.nextBillingDate) > now));
+  const cancelledGraceUntil =
+    sub?.trialEndDate && new Date(sub.trialEndDate) > now
+      ? sub.trialEndDate
+      : sub?.nextBillingDate;
+
   // ══════════════════════════════════════════════════════════════════════════════
   // 뷰 1: 구독 없음 — 무료체험 시작
   // ══════════════════════════════════════════════════════════════════════════════
@@ -281,9 +308,10 @@ export default function Subscription() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 뷰 2: 무료체험 만료 / 해지 — 구독 시작 유도 (서비스 소개 카드)
+  // 뷰 2: 무료체험 만료 / 완전 만료된 해지 — 구독 시작 유도 (서비스 소개 카드)
+  // (해지했지만 아직 남은 기간이 있는 경우는 메인 뷰에서 "재개" 버튼으로 처리)
   // ══════════════════════════════════════════════════════════════════════════════
-  if (status === "pending_payment" || status === "cancelled" || status === "inactive") {
+  if (status === "pending_payment" || status === "inactive" || (status === "cancelled" && !cancelledStillInGrace)) {
     return (
       <>
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background py-12 px-4">
@@ -367,6 +395,15 @@ export default function Subscription() {
             <span>정기결제에 실패했습니다 ({sub?.failCount ?? 0}회). 카드를 다시 등록하면 즉시 결제 후 서비스가 정상화됩니다.</span>
           </div>
         )}
+        {status === "cancelled" && cancelledStillInGrace && (
+          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 mb-6">
+            <CalendarDays className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
+            <span>
+              구독이 해지되었지만 <strong>{fmtDate(cancelledGraceUntil)}</strong>까지는 이미 결제하신 기간이라 계속 이용하실 수 있어요.
+              계속 이용하시려면 아래에서 재개해주세요.
+            </span>
+          </div>
+        )}
 
         {/* ─── 1. 플랜 섹션 ───────────────────────────────────────────────── */}
         <div className="flex items-start justify-between py-6 border-b">
@@ -389,7 +426,9 @@ export default function Subscription() {
                   <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">결제 실패</Badge>
                 )}
                 {status === "cancelled" && (
-                  <Badge variant="secondary" className="text-xs">해지됨</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {cancelledStillInGrace ? "해지 예정" : "해지됨"}
+                  </Badge>
                 )}
                 {status === "pending_payment" && (
                   <Badge variant="outline" className="text-red-600 border-red-300 text-xs">결제 필요</Badge>
@@ -411,7 +450,12 @@ export default function Subscription() {
                 </p>
               )}
               {status === "cancelled" && (
-                <p className="text-sm text-muted-foreground mt-0.5">구독이 해지되었습니다.</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {cancelledStillInGrace
+                    ? `이용 가능 기간: ${fmtDate(cancelledGraceUntil)}까지`
+                    : "구독이 해지되었습니다."}
+                </p>
               )}
             </div>
           </div>
@@ -441,8 +485,8 @@ export default function Subscription() {
           </div>
         )}
 
-        {/* ─── 카드 등록 CTA (trialing·pending_payment·cancelled) ────────── */}
-        {(status === "trialing" || status === "pending_payment" || status === "cancelled") && (
+        {/* ─── 카드 등록 CTA (trialing·pending_payment) ───────────────────── */}
+        {(status === "trialing" || status === "pending_payment") && (
           <div className="py-6 border-b">
             <h2 className="font-semibold mb-1">결제</h2>
             <p className="text-sm text-muted-foreground mb-4">
@@ -450,6 +494,21 @@ export default function Subscription() {
             </p>
             <Button onClick={handleRegisterCard} disabled={isRegisteringCard} variant={status === "pending_payment" ? "default" : "outline"}>
               {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><CreditCard className="w-4 h-4 mr-2" />카드 등록하고 구독 시작</>}
+            </Button>
+          </div>
+        )}
+
+        {/* ─── 해지 취소(재개) CTA — 아직 남은 기간이 있는 cancelled 전용, 재결제 없음 ─── */}
+        {status === "cancelled" && cancelledStillInGrace && (
+          <div className="py-6 border-b">
+            <h2 className="font-semibold mb-1">구독 재개</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              남은 기간 안에 재개하면 추가 결제 없이 계속 이용하실 수 있어요.
+            </p>
+            <Button onClick={() => reactivateMutation.mutate()} disabled={reactivateMutation.isPending}>
+              {reactivateMutation.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />재개하는 중...</>
+                : <><RefreshCw className="w-4 h-4 mr-2" />구독 재개하기 (재결제 없음)</>}
             </Button>
           </div>
         )}
