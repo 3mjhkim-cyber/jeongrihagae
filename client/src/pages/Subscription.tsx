@@ -194,18 +194,20 @@ export default function Subscription() {
         },
       });
 
-      if (!response || response.code) {
-        // code가 있으면 실패(사용자 취소 포함)
-        const message = response?.message;
-        if (message) {
-          toast({ title: "카카오페이 등록 실패", description: message, variant: "destructive" });
-        }
+      if (!response || response.code || !response.billingKey) {
+        // code가 있거나 billingKey가 없으면 실패(사용자 취소 포함)
+        const message = response?.message || "카카오페이 결제창을 열지 못했습니다. 잠시 후 다시 시도해주세요.";
+        toast({ title: "카카오페이 등록 실패", description: message, variant: "destructive" });
         return;
       }
 
       await attachAndPay(response.billingKey);
     } catch (err: any) {
-      toast({ title: "카카오페이 등록 실패", description: err.message, variant: "destructive" });
+      toast({
+        title: "카카오페이 등록 실패",
+        description: err?.message || "알 수 없는 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     } finally {
       setIsRegisteringCard(false);
     }
