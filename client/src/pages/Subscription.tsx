@@ -103,17 +103,18 @@ export default function Subscription() {
 
   const [isRegisteringCard, setIsRegisteringCard] = useState(false);
   const [showDemoCardDialog, setShowDemoCardDialog] = useState(false);
-  const [showKakaoPayDialog, setShowKakaoPayDialog] = useState(false);
-  const [kakaoPayStep, setKakaoPayStep] = useState<"select"|"processing"|"done">("select");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNote, setCancelNote] = useState("");
   const [receiptPayment, setReceiptPayment] = useState<PaymentRecord | null>(null);
 
-  const isPortOneConfigured = !!(
-    import.meta.env.VITE_PORTONE_STORE_ID &&
-    import.meta.env.VITE_PORTONE_CHANNEL_KEY
-  );
+  const PORTONE_STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID;
+  // 카카오페이 정기결제(빌링) 채널이 카드 채널과 분리되어 있다면
+  // VITE_PORTONE_CHANNEL_KEY_KAKAOPAY 에 별도 채널 키를 설정한다.
+  const KAKAOPAY_CHANNEL_KEY =
+    import.meta.env.VITE_PORTONE_CHANNEL_KEY_KAKAOPAY || import.meta.env.VITE_PORTONE_CHANNEL_KEY;
+
+  const isPortOneConfigured = !!(PORTONE_STORE_ID && KAKAOPAY_CHANNEL_KEY);
 
   const { data: sub, isLoading: isSubLoading } = useQuery<SubData>({
     queryKey: ["/api/subscription"],
@@ -169,9 +170,45 @@ export default function Subscription() {
     }
   };
 
-  const handleRegisterCard = () => {
-    setKakaoPayStep("select");
-    setShowKakaoPayDialog(true);
+  const handleRegisterCard = async () => {
+    if (!isPortOneConfigured) {
+      // 포트원 환경변수 미설정 시 (로컬 개발) 데모 흐름으로 대체
+      setShowDemoCardDialog(true);
+      return;
+    }
+
+    setIsRegisteringCard(true);
+    try {
+      const issueId = `issue_${user!.id}_${Date.now()}`;
+      const response = await PortOne.requestIssueBillingKey({
+        storeId: PORTONE_STORE_ID,
+        channelKey: KAKAOPAY_CHANNEL_KEY,
+        billingKeyMethod: "EASY_PAY",
+        issueId,
+        issueName: "정리하개 스탠다드 플랜 정기결제",
+        customer: {
+          customerId: String(user!.id),
+          fullName: (user as any).shopName || user!.email,
+          email: user!.email,
+          phoneNumber: (user as any).phone || undefined,
+        },
+      });
+
+      if (!response || response.code) {
+        // code가 있으면 실패(사용자 취소 포함)
+        const message = response?.message;
+        if (message) {
+          toast({ title: "카카오페이 등록 실패", description: message, variant: "destructive" });
+        }
+        return;
+      }
+
+      await attachAndPay(response.billingKey);
+    } catch (err: any) {
+      toast({ title: "카카오페이 등록 실패", description: err.message, variant: "destructive" });
+    } finally {
+      setIsRegisteringCard(false);
+    }
   };
 
   // ── 로딩 / 인증 가드 ─────────────────────────────────────────────────────────
@@ -483,112 +520,7 @@ export default function Subscription() {
 
       </div>
 
-      {/* ── 카카오페이 결제 모달 ──────────────────────────────────────────────── */}
-      <Dialog open={showKakaoPayDialog} onOpenChange={(v) => { if (!v && kakaoPayStep !== "processing") setShowKakaoPayDialog(false); }}>
-        <DialogContent className="p-0 overflow-hidden max-w-sm border-0" style={{ borderRadius: 16 }}>
-          {/* 헤더 */}
-          <div style={{ background: "#FAE100", padding: "16px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, background: "#3A1D1D", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>💛</div>
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#3A1D1D" }}>카카오페이</span>
-            <span style={{ fontSize: 11, color: "#6B4C4C", marginLeft: "auto" }}>안전한 결제</span>
-          </div>
-
-          {kakaoPayStep === "select" && (
-            <div>
-              {/* 상점 */}
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid #F0F0F0", display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 38, height: 38, background: "#3B5BDB", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>✂️</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1A1A1A" }}>정리하개</div>
-                  <div style={{ fontSize: 11, color: "#888" }}>반려동물 미용샵 관리 서비스</div>
-                </div>
-              </div>
-
-              {/* 금액 */}
-              <div style={{ padding: "14px 20px", borderBottom: "8px solid #F5F5F5" }}>
-                <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>결제 금액</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: "#1A1A1A" }}>9,900<span style={{ fontSize: 16, fontWeight: 400, color: "#555" }}>원</span></div>
-                <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>스탠다드 플랜 · 월정기결제</div>
-              </div>
-
-              {/* 계정 */}
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid #F0F0F0" }}>
-                <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>카카오페이 계정</div>
-                <div style={{ background: "#FAFAFA", border: "1px solid #E8E8E8", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 34, height: 34, background: "#FAE100", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🐾</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{(user as any).shopName || user.email}</div>
-                    <div style={{ fontSize: 11, color: "#888", marginTop: 1 }}>카카오페이 연결됨</div>
-                  </div>
-                  <div style={{ width: 20, height: 20, background: "#FAE100", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✓</div>
-                </div>
-              </div>
-
-              {/* 결제 수단 */}
-              <div style={{ padding: "14px 20px", borderBottom: "8px solid #F5F5F5" }}>
-                <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>결제 수단</div>
-                {[
-                  { label: "KB국민카드 ****1234", color: "#1A4CA1", text: "KB", selected: true },
-                  { label: "신한카드 ****5678", color: "#0046FF", text: "신한", selected: false },
-                ].map((m, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i === 0 ? "1px solid #F5F5F5" : "none" }}>
-                    <div style={{ width: 32, height: 22, borderRadius: 4, background: m.color, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{m.text}</div>
-                    <div style={{ flex: 1, fontSize: 13, color: "#1A1A1A" }}>{m.label}</div>
-                    <div style={{ width: 18, height: 18, borderRadius: "50%", border: m.selected ? "none" : "2px solid #DDD", background: m.selected ? "#FAE100" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>{m.selected ? "✓" : ""}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 약관 */}
-              <div style={{ padding: "12px 20px", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <div style={{ width: 16, height: 16, borderRadius: 4, background: "#FAE100", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 1 }}>✓</div>
-                <div style={{ fontSize: 11, color: "#555", lineHeight: 1.5 }}>정기결제 서비스 이용약관 및 개인정보 제3자 제공에 동의하며, 매월 자동 결제됩니다.</div>
-              </div>
-
-              {/* 버튼 */}
-              <div style={{ padding: "0 20px 20px" }}>
-                <button
-                  onClick={() => {
-                    setKakaoPayStep("processing");
-                    setTimeout(() => setKakaoPayStep("done"), 2000);
-                  }}
-                  style={{ width: "100%", background: "#FAE100", border: "none", borderRadius: 12, padding: "15px", fontSize: 16, fontWeight: 700, color: "#3A1D1D", cursor: "pointer" }}
-                >
-                  💛 9,900원 결제하기
-                </button>
-              </div>
-            </div>
-          )}
-
-          {kakaoPayStep === "processing" && (
-            <div style={{ padding: "48px 20px", textAlign: "center" }}>
-              <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4" style={{ color: "#FAE100" }} />
-              <div style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A" }}>결제 처리 중...</div>
-              <div style={{ fontSize: 12, color: "#888", marginTop: 6 }}>잠시만 기다려주세요</div>
-            </div>
-          )}
-
-          {kakaoPayStep === "done" && (
-            <div style={{ padding: "48px 20px", textAlign: "center" }}>
-              <div style={{ width: 56, height: 56, background: "#FAE100", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>✓</div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: "#1A1A1A", marginBottom: 6 }}>결제 완료!</div>
-              <div style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>9,900원이 결제되었습니다</div>
-              <div style={{ fontSize: 11, color: "#999", marginBottom: 28 }}>스탠다드 플랜 구독이 시작되었습니다</div>
-              <button
-                onClick={async () => {
-                  setShowKakaoPayDialog(false);
-                  await attachAndPay("demo_kakaopay_" + Date.now());
-                }}
-                style={{ width: "100%", background: "#FAE100", border: "none", borderRadius: 12, padding: "15px", fontSize: 15, fontWeight: 700, color: "#3A1D1D", cursor: "pointer" }}
-              >
-                확인
-              </button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ── 데모 카드 등록 다이얼로그 ─────────────────────────────────────────── */}
+      {/* ── 데모 카드 등록 다이얼로그 (포트원 미설정 시 로컬 개발용) ─────────────── */}
       <Dialog open={showDemoCardDialog} onOpenChange={setShowDemoCardDialog}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
