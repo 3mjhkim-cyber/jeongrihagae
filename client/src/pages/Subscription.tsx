@@ -142,12 +142,17 @@ export default function Subscription() {
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/subscription/cancel", {});
+      const res = await apiRequest("POST", "/api/subscription/cancel", {
+        reason: cancelReason || undefined,
+        note: cancelNote || undefined,
+      });
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/subscription"] });
       setShowCancelModal(false);
+      setCancelReason("");
+      setCancelNote("");
       toast({ title: "구독이 해지되었습니다.", description: "다음 결제일부터 자동 갱신이 중단됩니다." });
     },
     onError: () =>

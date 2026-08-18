@@ -889,6 +889,8 @@ export async function registerRoutes(
         ownerEmail: ownerMap[s.id] ?? null,
         trialStartDate: sub?.trialStartDate ?? null,
         trialEndDate: sub?.trialEndDate ?? null,
+        cancelReason: sub?.cancelReason ?? null,
+        cancelNote: sub?.cancelNote ?? null,
       };
     });
     res.json(result);
@@ -1999,6 +2001,7 @@ export async function registerRoutes(
    */
   app.post('/api/subscription/cancel', requireAuth, async (req, res) => {
     const user = req.user as any;
+    const { reason, note } = req.body as { reason?: unknown; note?: unknown };
     const sub = await storage.getUserSubscription(user.id);
     if (!sub) {
       return res.status(404).json({ message: '구독 정보가 없습니다.' });
@@ -2010,6 +2013,8 @@ export async function registerRoutes(
     // nextBillingDate는 유지: 현재 기간 종료일로 사용 (미들웨어에서 접근 허용 기준)
     const updated = await storage.updateUserSubscription(sub.id, {
       status: 'cancelled',
+      cancelReason: typeof reason === 'string' ? reason.slice(0, 200) : null,
+      cancelNote: typeof note === 'string' ? note.slice(0, 1000) : null,
     });
     res.json({ subscription: updated });
   });

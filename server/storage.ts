@@ -816,14 +816,27 @@ export class DatabaseStorage implements IStorage {
     return map;
   }
 
-  async getUserSubscriptionsByUserIds(userIds: number[]): Promise<Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null }>> {
+  async getUserSubscriptionsByUserIds(userIds: number[]): Promise<Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null; cancelReason: string | null; cancelNote: string | null }>> {
     if (userIds.length === 0) return {};
     const subs = await db
-      .select({ userId: userSubscriptions.userId, status: userSubscriptions.status, trialStartDate: userSubscriptions.trialStartDate, trialEndDate: userSubscriptions.trialEndDate })
+      .select({
+        userId: userSubscriptions.userId,
+        status: userSubscriptions.status,
+        trialStartDate: userSubscriptions.trialStartDate,
+        trialEndDate: userSubscriptions.trialEndDate,
+        cancelReason: userSubscriptions.cancelReason,
+        cancelNote: userSubscriptions.cancelNote,
+      })
       .from(userSubscriptions)
       .where(inArray(userSubscriptions.userId, userIds));
-    const map: Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null }> = {};
-    for (const s of subs) map[s.userId] = { status: s.status, trialStartDate: s.trialStartDate, trialEndDate: s.trialEndDate };
+    const map: Record<number, { status: string; trialStartDate: Date | null; trialEndDate: Date | null; cancelReason: string | null; cancelNote: string | null }> = {};
+    for (const s of subs) map[s.userId] = {
+      status: s.status,
+      trialStartDate: s.trialStartDate,
+      trialEndDate: s.trialEndDate,
+      cancelReason: s.cancelReason,
+      cancelNote: s.cancelNote,
+    };
     return map;
   }
 
