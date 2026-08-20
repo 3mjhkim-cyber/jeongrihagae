@@ -454,15 +454,25 @@ export async function registerRoutes(
       return res.status(400).json({ message: 'invalid webhook signature' });
     }
 
+    console.log(`[webhook] 수신: type=${String(webhook.type)} data=${JSON.stringify((webhook as any).data)}`);
+
     const CANCEL_TYPES = new Set(['Transaction.Cancelled', 'Transaction.PartialCancelled']);
     if (typeof webhook.type === 'string' && CANCEL_TYPES.has(webhook.type)) {
       try {
         const paymentId = (webhook as any).data?.paymentId as string | undefined;
-        if (paymentId) {
+        if (!paymentId) {
+          console.error('[webhook] 취소 이벤트에 paymentId 없음:', JSON.stringify(webhook));
+        } else {
           const payment = await storage.getUserPaymentByProviderTxId(paymentId);
-          if (payment) {
+          if (!payment) {
+            console.error(`[webhook] paymentId=${paymentId} 에 매칭되는 user_payments 레코드를 못 찾음 — 구독 결제가 아니거나 provider_tx_id 불일치`);
+          } else {
             const sub = await storage.getUserSubscription(payment.userId);
-            if (sub && sub.status !== 'cancelled') {
+            if (!sub) {
+              console.error(`[webhook] userId=${payment.userId} 의 구독 레코드를 못 찾음`);
+            } else if (sub.status === 'cancelled') {
+              console.log(`[webhook] userId=${payment.userId} 이미 cancelled 상태라 스킵`);
+            } else {
               // 환불된 결제라서 이미 낸 기간 취급의 유예 접근(nextBillingDate 기준)도
               // 같이 지워야 한다 — 안 지우면 requireActiveSubscription 이 "이미 낸 기간"으로
               // 오인해 환불받고도 계속 서비스를 쓸 수 있게 된다.
