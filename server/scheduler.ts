@@ -98,6 +98,20 @@ async function processRecurringBillings(): Promise<void> {
       continue;
     }
 
+    // 관리자가 가맹점을 강제 비활성화한 경우 청구를 건너뛴다.
+    // (requireActiveSubscription 미들웨어도 이 상태면 무조건 서비스 접근을 막는데,
+    //  여기서 안 걸러내면 서비스는 못 쓰면서 돈만 계속 빠져나가는 상황이 생긴다.)
+    const subUser = await storage.getUser(sub.userId);
+    if (subUser?.shopId) {
+      const shop = await storage.getShop(subUser.shopId);
+      if (shop?.subscriptionStatus === 'inactive') {
+        console.log(
+          `[scheduler] userId=${sub.userId} 가맹점이 관리자에 의해 비활성화됨, 청구 건너뜀`,
+        );
+        continue;
+      }
+    }
+
     const orderId = `sub_${sub.userId}_${randomBytes(4).toString("hex")}`;
     const now = new Date();
 
