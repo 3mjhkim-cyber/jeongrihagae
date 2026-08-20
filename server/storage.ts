@@ -82,6 +82,7 @@ export interface IStorage {
   createUserPayment(data: InsertUserPayment): Promise<UserPayment>;
   getUserPayments(userId: number): Promise<UserPayment[]>;
   getUserPaymentByProviderTxId(providerTxId: string): Promise<UserPayment | undefined>;
+  getLatestSuccessfulUserPayment(userId: number): Promise<UserPayment | undefined>;
 
   // 스케줄러용 조회
   /** status=trialing 이고 trial_end_date <= limitDate 인 구독 목록 (만료 D-3 포함) */
@@ -873,6 +874,17 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(userPayments)
       .where(eq(userPayments.providerTxId, providerTxId));
+    return payment;
+  }
+
+  /** 가장 최근에 성공한 결제 건 — "지금 이용 중인 주기의 결제"인지 판단할 때 기준으로 쓴다 */
+  async getLatestSuccessfulUserPayment(userId: number): Promise<UserPayment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(userPayments)
+      .where(and(eq(userPayments.userId, userId), eq(userPayments.result, 'success')))
+      .orderBy(desc(userPayments.attemptedAt))
+      .limit(1);
     return payment;
   }
 

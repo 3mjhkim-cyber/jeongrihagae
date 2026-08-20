@@ -470,20 +470,30 @@ export async function registerRoutes(
             const sub = await storage.getUserSubscription(payment.userId);
             if (!sub) {
               console.error(`[webhook] userId=${payment.userId} 의 구독 레코드를 못 찾음`);
-            } else if (sub.status === 'cancelled' && sub.nextBillingDate === null) {
-              // 이미 (웹훅으로든 수동으로든) 유예기간까지 지워진 상태 — 중복 처리 스킵.
-              console.log(`[webhook] userId=${payment.userId} 이미 완전히 차단된 상태라 스킵`);
             } else {
-              // status가 이미 'cancelled'일 수 있다 — 앱 안에서 먼저 "구독 취소"를 눌러
-              // 유예기간(nextBillingDate)이 남아있는 상태였을 수 있기 때문이다.
-              // 하지만 "앱에서 취소"와 "PG에서 환불"은 의미가 다르다: 환불은 이미 낸
-              // 기간 취급의 유예 접근도 같이 지워야 한다 — 안 지우면 환불받고도
-              // 계속 서비스를 쓸 수 있게 된다. 그래서 status와 무관하게 항상 처리한다.
-              await storage.updateUserSubscription(sub.id, {
-                status: 'cancelled',
-                nextBillingDate: null,
-              });
-              console.log(`[webhook] PG 취소/환불 반영: userId=${payment.userId} paymentId=${paymentId} → 구독 즉시 차단`);
+              // 환불된 결제가 "지금 이용 중인 주기"의 결제가 맞는지 확인한다.
+              // 예: 3월 결제만 따로 환불해줘도 4월치를 이미 정상 결제하고 계속
+              // 이용 중이라면, 그 최신 결제가 살아있는 한 서비스를 차단하면 안 된다.
+              const latestSuccess = await storage.getLatestSuccessfulUserPayment(payment.userId);
+              const isMostRecentPayment = latestSuccess?.id === payment.id;
+
+              if (!isMostRecentPayment) {
+                console.log(`[webhook] userId=${payment.userId} paymentId=${paymentId} 는 과거(이미 지나간) 결제 환불 — 최신 결제(id=${latestSuccess?.id})가 살아있어 구독 유지`);
+              } else if (sub.status === 'cancelled' && sub.nextBillingDate === null) {
+                // 이미 (웹훅으로든 수동으로든) 유예기간까지 지워진 상태 — 중복 처리 스킵.
+                console.log(`[webhook] userId=${payment.userId} 이미 완전히 차단된 상태라 스킵`);
+              } else {
+                // status가 이미 'cancelled'일 수 있다 — 앱 안에서 먼저 "구독 취소"를 눌러
+                // 유예기간(nextBillingDate)이 남아있는 상태였을 수 있기 때문이다.
+                // 하지만 "앱에서 취소"와 "PG에서 환불"은 의미가 다르다: 환불은 이미 낸
+                // 기간 취급의 유예 접근도 같이 지워야 한다 — 안 지우면 환불받고도
+                // 계속 서비스를 쓸 수 있게 된다. 그래서 status와 무관하게 항상 처리한다.
+                await storage.updateUserSubscription(sub.id, {
+                  status: 'cancelled',
+                  nextBillingDate: null,
+                });
+                console.log(`[webhook] PG 취소/환불 반영: userId=${payment.userId} paymentId=${paymentId} → 구독 즉시 차단`);
+              }
             }
           }
         }
