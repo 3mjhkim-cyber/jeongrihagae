@@ -76,8 +76,18 @@ export async function chargeBillingKey(
       return { success: true, txId: data.id ?? orderId };
     }
 
+    // 실패 원인 진단용 로그 (실패 사유가 어느 필드에 있는지 모를 때를 대비해 응답 전체를 남긴다)
+    console.error(
+      `[billing] charge failed userId=${userId} orderId=${orderId} httpStatus=${res.status}`,
+      JSON.stringify(data),
+    );
+
     const failReason =
-      data.message ?? data.failure?.message ?? `HTTP ${res.status}`;
+      data.failure?.reason ??
+      data.failure?.pgMessage ??
+      data.failure?.message ??
+      data.message ??
+      (data.status ? `status=${data.status}` : `HTTP ${res.status}`);
     return { success: false, txId: data.id ?? orderId, failReason };
   } catch (err: any) {
     return { success: false, txId: orderId, failReason: err.message };
