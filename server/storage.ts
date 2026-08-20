@@ -81,6 +81,7 @@ export interface IStorage {
   // 결제 내역
   createUserPayment(data: InsertUserPayment): Promise<UserPayment>;
   getUserPayments(userId: number): Promise<UserPayment[]>;
+  getUserPaymentByProviderTxId(providerTxId: string): Promise<UserPayment | undefined>;
 
   // 스케줄러용 조회
   /** status=trialing 이고 trial_end_date <= limitDate 인 구독 목록 (만료 D-3 포함) */
@@ -865,6 +866,14 @@ export class DatabaseStorage implements IStorage {
       .from(userPayments)
       .where(eq(userPayments.userId, userId))
       .orderBy(desc(userPayments.attemptedAt));
+  }
+
+  async getUserPaymentByProviderTxId(providerTxId: string): Promise<UserPayment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(userPayments)
+      .where(eq(userPayments.providerTxId, providerTxId));
+    return payment;
   }
 
   async getExpiringTrials(limitDate: Date): Promise<UserSubscription[]> {
