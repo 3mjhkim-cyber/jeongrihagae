@@ -28,6 +28,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
+import { getCancelGraceInfo } from "@/hooks/use-subscription";
 import * as PortOne from "@portone/browser-sdk/v2";
 
 // ─── 플랜 정의 ─────────────────────────────────────────────────────────────────
@@ -256,15 +257,9 @@ export default function Subscription() {
 
   // 해지했더라도 이미 낸 기간(trialEndDate 또는 nextBillingDate)이 남아있으면
   // 재결제 없이 "재개"만 하면 되는 유예 기간으로 취급한다.
-  const now = new Date();
-  const cancelledStillInGrace =
-    status === "cancelled" &&
-    ((!!sub?.trialEndDate && new Date(sub.trialEndDate) > now) ||
-      (!!sub?.nextBillingDate && new Date(sub.nextBillingDate) > now));
-  const cancelledGraceUntil =
-    sub?.trialEndDate && new Date(sub.trialEndDate) > now
-      ? sub.trialEndDate
-      : sub?.nextBillingDate;
+  const graceInfo = getCancelGraceInfo(sub);
+  const cancelledStillInGrace = !!graceInfo;
+  const cancelledGraceUntil = graceInfo?.endDate;
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 뷰 1: 구독 없음 — 무료체험 시작
@@ -400,16 +395,6 @@ export default function Subscription() {
             <span>정기결제에 실패했습니다 ({sub?.failCount ?? 0}회). 카드를 다시 등록하면 즉시 결제 후 서비스가 정상화됩니다.</span>
           </div>
         )}
-        {status === "cancelled" && cancelledStillInGrace && (
-          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 mb-6">
-            <CalendarDays className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
-            <span>
-              구독이 해지되었지만 <strong>{fmtDate(cancelledGraceUntil)}</strong>까지는 이미 결제하신 기간이라 계속 이용하실 수 있어요.
-              계속 이용하시려면 아래에서 재개해주세요.
-            </span>
-          </div>
-        )}
-
         {/* ─── 1. 플랜 섹션 ───────────────────────────────────────────────── */}
         <div className="flex items-start justify-between py-6 border-b">
           <div className="flex items-center gap-4">

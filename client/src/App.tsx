@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/Navbar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { SubscriptionNudgeBanner } from "@/components/SubscriptionNudgeBanner";
 import { useScissorCursor } from "@/hooks/useScissorCursor";
 
 import Home from "@/pages/Home";
@@ -34,6 +35,7 @@ function Router() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
+      {location.startsWith("/admin") && <SubscriptionNudgeBanner />}
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 interface SubscriptionData {
   status: string;
-  isLocked: boolean;
+  isLocked?: boolean;
   trialEndDate?: string | null;
   nextBillingDate?: string | null;
   daysUntilTrialEnd?: number | null;
@@ -40,4 +40,28 @@ export function isSubscriptionDataAccessible(data: SubscriptionData | undefined)
 export function useIsSubscriptionAccessible() {
   const { data, isLoading } = useSubscription();
   return { isLoading, userAccessible: isSubscriptionDataAccessible(data) };
+}
+
+/**
+ * 해지했지만 아직 남은 이용 기간(유예기간)의 종료일과 남은 일수.
+ * 유예기간이 아니면 null.
+ */
+export function getCancelGraceInfo(
+  data: SubscriptionData | undefined,
+): { endDate: string; daysLeft: number } | null {
+  if (!data || data.status !== "cancelled") return null;
+  const now = new Date();
+  const endDate =
+    data.trialEndDate && new Date(data.trialEndDate) > now
+      ? data.trialEndDate
+      : data.nextBillingDate && new Date(data.nextBillingDate) > now
+        ? data.nextBillingDate
+        : null;
+  if (!endDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  const daysLeft = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return { endDate, daysLeft };
 }
