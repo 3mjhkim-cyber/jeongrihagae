@@ -20,10 +20,24 @@ export function useSubscription() {
   });
 }
 
-/** 무료 체험(trialing) 또는 유료 구독(active) 중인지 여부 */
+/**
+ * 무료 체험(trialing) 또는 유료 구독(active) 중이거나, 해지했더라도 아직 이미 낸
+ * 기간(trialEndDate/nextBillingDate)이 남아있으면 접근 가능으로 취급한다.
+ * server/routes.ts 의 requireActiveSubscription 미들웨어와 동일한 기준이어야
+ * 화면이 백엔드보다 먼저 잠기는 일이 없다.
+ */
+export function isSubscriptionDataAccessible(data: SubscriptionData | undefined): boolean {
+  if (!data) return false;
+  if (data.status === "active" || data.status === "trialing") return true;
+  if (data.status === "cancelled") {
+    const now = new Date();
+    if (data.trialEndDate && new Date(data.trialEndDate) > now) return true;
+    if (data.nextBillingDate && new Date(data.nextBillingDate) > now) return true;
+  }
+  return false;
+}
+
 export function useIsSubscriptionAccessible() {
   const { data, isLoading } = useSubscription();
-  const userAccessible =
-    data?.status === "active" || data?.status === "trialing";
-  return { isLoading, userAccessible };
+  return { isLoading, userAccessible: isSubscriptionDataAccessible(data) };
 }

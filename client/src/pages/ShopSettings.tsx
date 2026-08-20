@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useSubscription } from "@/hooks/use-subscription";
+import { useSubscription, isSubscriptionDataAccessible } from "@/hooks/use-subscription";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Loader2, User, Key, ArrowLeft, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
@@ -17,8 +17,7 @@ import type { Shop } from "@shared/schema";
 export default function ShopSettings() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { data: subscription, isLoading: isSubLoading } = useSubscription();
-  const userAccessible =
-    subscription?.status === "active" || subscription?.status === "trialing";
+  const userAccessible = isSubscriptionDataAccessible(subscription);
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -139,10 +138,10 @@ export default function ShopSettings() {
     });
   };
 
-  // shop 레벨(관리자 수동 활성화 등) 또는 userSubscription 레벨(카카오페이 정기결제) 중
-  // 하나라도 이용 가능하면 활성으로 표시한다 — /admin/subscription 페이지와 동일한 기준.
+  // shop 레벨(관리자 수동 활성화 등) 또는 userSubscription 레벨(카카오페이 정기결제,
+  // 해지했더라도 이미 낸 기간이 남은 경우 포함) 중 하나라도 이용 가능하면 활성으로 표시한다.
   const isSubscriptionActive =
-    shop?.subscriptionStatus === 'active' || subscription?.status === 'active';
+    shop?.subscriptionStatus === 'active' || userAccessible;
   const subscriptionLabel = isSubscriptionActive ? '활성' : '비활성';
   const subscriptionEndDate = shop?.subscriptionEnd ?? subscription?.nextBillingDate ?? null;
 
