@@ -13,6 +13,7 @@ import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
 import { chargeBillingKey, PLAN_PRICE } from "./billing";
 import { addOneMonth } from "./scheduler";
+import { Webhook } from "@portone/server-sdk";
 
 const scryptAsync = promisify(scrypt);
 
@@ -424,6 +425,62 @@ export async function registerRoutes(
 
   app.use(passport.initialize());
   app.use(passport.session());
+
+  /**
+   * 포트원 웹훅 수신.
+   *
+   * 왜 필요한가: 포트원 콘솔/파트너어드민에서 관리자가 직접 결제를 취소·환불하면
+   * 우리 서버는 그 사실을 알 방법이 없어서(폴링/이벤트 수신 없이는) 구독이 계속
+   * "active"로 남아 서비스가 계속 이용 가능한 상태가 된다. 이 웹훅을 등록해두면
+   * 그런 PG 쪽 취소가 우리 DB에도 반영된다.
+   *
+   * 설정 방법: 포트원 콘솔 > 결제 연동 > 결제알림(Webhook) 관리에서
+   *   URL: https://<배포도메인>/api/webhooks/portone
+   *   위 화면에서 발급되는 "Webhook Secret" 값을 PORTONE_WEBHOOK_SECRET 환경변수로 등록.
+   * PORTONE_WEBHOOK_SECRET 미설정 시에는 안전하게 무시(200 응답)한다.
+   */
+  app.post('/api/webhooks/portone', async (req: any, res) => {
+    const secret = process.env.PORTONE_WEBHOOK_SECRET;
+    if (!secret) {
+      return res.status(200).json({ received: true, skipped: 'PORTONE_WEBHOOK_SECRET not set' });
+    }
+
+    let webhook;
+    try {
+      const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf-8') : JSON.stringify(req.body);
+      webhook = await Webhook.verify(secret, raw, req.headers as Record<string, string>);
+    } catch (err) {
+      console.error('[webhook] portone 서명 검증 실패:', err);
+      return res.status(400).json({ message: 'invalid webhook signature' });
+    }
+
+    const CANCEL_TYPES = new Set(['Transaction.Cancelled', 'Transaction.PartialCancelled']);
+    if (typeof webhook.type === 'string' && CANCEL_TYPES.has(webhook.type)) {
+      try {
+        const paymentId = (webhook as any).data?.paymentId as string | undefined;
+        if (paymentId) {
+          const payment = await storage.getUserPaymentByProviderTxId(paymentId);
+          if (payment) {
+            const sub = await storage.getUserSubscription(payment.userId);
+            if (sub && sub.status !== 'cancelled') {
+              // 환불된 결제라서 이미 낸 기간 취급의 유예 접근(nextBillingDate 기준)도
+              // 같이 지워야 한다 — 안 지우면 requireActiveSubscription 이 "이미 낸 기간"으로
+              // 오인해 환불받고도 계속 서비스를 쓸 수 있게 된다.
+              await storage.updateUserSubscription(sub.id, {
+                status: 'cancelled',
+                nextBillingDate: null,
+              });
+              console.log(`[webhook] PG 취소/환불 반영: userId=${payment.userId} paymentId=${paymentId} → 구독 즉시 차단`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[webhook] 취소 반영 중 오류:', err);
+      }
+    }
+
+    res.status(200).json({ received: true });
+  });
 
   // ── 구독 필요 API 경로에 requireActiveSubscription 적용 ──────────────────────
   // /api/subscription* 은 제외 (구독 페이지 자체 API는 항상 접근 가능해야 함)
