@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useIsSubscriptionAccessible } from "@/hooks/use-subscription";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Loader2, User, Key, ArrowLeft, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
@@ -16,7 +16,9 @@ import type { Shop } from "@shared/schema";
 
 export default function ShopSettings() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { userAccessible, isLoading: isSubLoading } = useIsSubscriptionAccessible();
+  const { data: subscription, isLoading: isSubLoading } = useSubscription();
+  const userAccessible =
+    subscription?.status === "active" || subscription?.status === "trialing";
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -137,8 +139,12 @@ export default function ShopSettings() {
     });
   };
 
-  const isSubscriptionActive = shop?.subscriptionStatus === 'active';
+  // shop 레벨(관리자 수동 활성화 등) 또는 userSubscription 레벨(카카오페이 정기결제) 중
+  // 하나라도 이용 가능하면 활성으로 표시한다 — /admin/subscription 페이지와 동일한 기준.
+  const isSubscriptionActive =
+    shop?.subscriptionStatus === 'active' || subscription?.status === 'active';
   const subscriptionLabel = isSubscriptionActive ? '활성' : '비활성';
+  const subscriptionEndDate = shop?.subscriptionEnd ?? subscription?.nextBillingDate ?? null;
 
   return (
     <div className="min-h-screen bg-secondary/30 pb-20">
@@ -236,9 +242,9 @@ export default function ShopSettings() {
             >
               {isSubscriptionActive ? '구독 관리' : '구독하기'}
             </Button>
-            {isSubscriptionActive && shop?.subscriptionEnd && (
+            {isSubscriptionActive && subscriptionEndDate && (
               <p className="text-sm text-muted-foreground">
-                만료일: {new Date(shop.subscriptionEnd).toLocaleDateString('ko-KR')}
+                만료일: {new Date(subscriptionEndDate).toLocaleDateString('ko-KR')}
               </p>
             )}
           </CardContent>
