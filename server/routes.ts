@@ -470,12 +470,15 @@ export async function registerRoutes(
             const sub = await storage.getUserSubscription(payment.userId);
             if (!sub) {
               console.error(`[webhook] userId=${payment.userId} 의 구독 레코드를 못 찾음`);
-            } else if (sub.status === 'cancelled') {
-              console.log(`[webhook] userId=${payment.userId} 이미 cancelled 상태라 스킵`);
+            } else if (sub.status === 'cancelled' && sub.nextBillingDate === null) {
+              // 이미 (웹훅으로든 수동으로든) 유예기간까지 지워진 상태 — 중복 처리 스킵.
+              console.log(`[webhook] userId=${payment.userId} 이미 완전히 차단된 상태라 스킵`);
             } else {
-              // 환불된 결제라서 이미 낸 기간 취급의 유예 접근(nextBillingDate 기준)도
-              // 같이 지워야 한다 — 안 지우면 requireActiveSubscription 이 "이미 낸 기간"으로
-              // 오인해 환불받고도 계속 서비스를 쓸 수 있게 된다.
+              // status가 이미 'cancelled'일 수 있다 — 앱 안에서 먼저 "구독 취소"를 눌러
+              // 유예기간(nextBillingDate)이 남아있는 상태였을 수 있기 때문이다.
+              // 하지만 "앱에서 취소"와 "PG에서 환불"은 의미가 다르다: 환불은 이미 낸
+              // 기간 취급의 유예 접근도 같이 지워야 한다 — 안 지우면 환불받고도
+              // 계속 서비스를 쓸 수 있게 된다. 그래서 status와 무관하게 항상 처리한다.
               await storage.updateUserSubscription(sub.id, {
                 status: 'cancelled',
                 nextBillingDate: null,
