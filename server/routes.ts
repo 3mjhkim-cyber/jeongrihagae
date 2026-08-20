@@ -896,6 +896,20 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  // [임시 진단용] 특정 결제건의 포트원 원본 응답을 그대로 확인 — 원인 파악 후 제거 예정
+  app.get('/api/admin/debug-portone-payment/:paymentId', requireSuperAdmin, async (req, res) => {
+    const apiSecret = process.env.PORTONE_API_SECRET;
+    if (!apiSecret) {
+      return res.status(500).json({ message: 'PORTONE_API_SECRET 미설정' });
+    }
+    const response = await fetch(
+      `https://api.portone.io/payments/${encodeURIComponent(req.params.paymentId)}`,
+      { headers: { Authorization: `PortOne ${apiSecret}` } },
+    );
+    const data = await response.json();
+    res.status(response.status).json(data);
+  });
+
   // 슈퍼관리자용 가맹점 정보 수정
   app.patch('/api/admin/shops/:id', requireSuperAdmin, async (req, res) => {
     const {
