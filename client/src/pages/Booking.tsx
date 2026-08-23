@@ -12,6 +12,8 @@ import type { Shop, Service, Customer } from "@shared/schema";
 import { formatKoreanPhone } from "@/lib/phone";
 import { useAvailableTimeSlots } from "@/hooks/use-shop";
 import { checkClosedStatus, getClosedDatesInRange } from "@/lib/date-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const bookingFormSchema = z.object({
   customerName: z.string().min(2, "보호자 이름을 2글자 이상 입력해주세요"),
@@ -138,6 +140,8 @@ export default function Booking() {
   const [existingCustomer, setExistingCustomer] = useState<Customer | null>(null);
   const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
+  const [noticeAcknowledged, setNoticeAcknowledged] = useState(false);
+  const [noticeChecked, setNoticeChecked] = useState(false);
 
   const createBookingMutation = useMutation({
     mutationFn: async (data: BookingForm & { shopId: number }) => {
@@ -250,8 +254,48 @@ export default function Booking() {
     );
   }
 
+  const shopNotice = (shop as any).shopMemo as string | null | undefined;
+  const showNoticeGate = !!shopNotice && !noticeAcknowledged;
+
   return (
     <div className="min-h-screen bg-background pb-20 booking-page">
+      <Dialog open={showNoticeGate}>
+        <DialogContent
+          className="[&>button]:hidden max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              예약 전 안내사항
+            </DialogTitle>
+            <DialogDescription>{shop.name}에서 안내드리는 내용입니다.</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-secondary/40 p-4 text-sm whitespace-pre-wrap max-h-64 overflow-y-auto">
+            {shopNotice}
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <Checkbox
+              checked={noticeChecked}
+              onCheckedChange={(v) => setNoticeChecked(v === true)}
+              data-testid="checkbox-notice-confirm"
+            />
+            안내사항을 확인했습니다
+          </label>
+          <DialogFooter>
+            <Button
+              className="w-full"
+              disabled={!noticeChecked}
+              onClick={() => setNoticeAcknowledged(true)}
+              data-testid="button-notice-confirm"
+            >
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-primary text-white py-4 px-4">
         <div className="container mx-auto max-w-4xl booking-container">
           {/* 상단: 가게명 + 액션 버튼 */}

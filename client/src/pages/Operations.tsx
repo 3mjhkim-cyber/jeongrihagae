@@ -414,11 +414,12 @@ export default function Operations() {
             onChange={e => setShopMemo(e.target.value)}
             placeholder="예: 주차는 건물 지하 1층에서 가능합니다."
             rows={4}
+            maxLength={1000}
             className="resize-none"
             data-testid="textarea-shop-memo"
           />
           <div className="flex justify-between items-center">
-            <p className="text-xs text-muted-foreground">{shopMemo.length}/500자</p>
+            <p className="text-xs text-muted-foreground">{shopMemo.length}/1000자</p>
             <Button size="sm" onClick={() => updateShopMutation.mutate({ shopMemo })} disabled={updateShopMutation.isPending} data-testid="button-save-shop-memo">
               <Save className="w-3.5 h-3.5 mr-1" /> 저장
             </Button>
