@@ -554,6 +554,7 @@ export default function Booking() {
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 font-medium text-foreground/80 text-sm sm:text-base">
                     <Phone className="w-4 h-4 flex-shrink-0" /> 전화번호 *
+                    <span className="text-red-500 text-xs font-normal">오타 없이 정확하게 입력해주세요</span>
                   </label>
                   <div className="relative">
                     <input
