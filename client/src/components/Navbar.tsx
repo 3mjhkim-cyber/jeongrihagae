@@ -20,7 +20,12 @@ export function Navbar() {
           <div className="bg-primary/20 p-2 rounded-full group-hover:bg-primary/30 transition-colors">
             <Scissors className="h-6 w-6 text-primary group-hover:rotate-12 transition-transform" />
           </div>
-          <span className="text-xl font-bold text-foreground">정리하개</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-foreground">정리하개</span>
+            {isBookingPage && (
+              <span className="text-xs text-muted-foreground">예약 시스템</span>
+            )}
+          </div>
         </Link>
 
         <div className="flex items-center gap-2">
