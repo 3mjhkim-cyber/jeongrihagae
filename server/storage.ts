@@ -1,4 +1,4 @@
-import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
+import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, appSettings, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, and, count, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -89,6 +89,23 @@ export interface IStorage {
   getExpiringTrials(limitDate: Date): Promise<UserSubscription[]>;
   /** next_billing_date <= today 이고 status IN ('active','past_due') 인 구독 목록 */
   getDueSubscriptions(today: Date): Promise<UserSubscription[]>;
+
+  // 앱 설정 (요금 등)
+  getSetting(key: string): Promise<string | undefined>;
+  setSetting(key: string, value: string): Promise<void>;
+
+  // 창립 멤버
+  countFoundingMembers(): Promise<number>;
+  /**
+   * 창립 멤버 지정/해제. 지정 시 price 를 매장에 고정 저장한다.
+   * 지정 시 이미 limit 곳이 차 있으면 변경하지 않고 { limitReached: true } 를 반환.
+   */
+  setFoundingMember(
+    shopId: number,
+    enabled: boolean,
+    price: number,
+    limit: number,
+  ): Promise<{ shop?: Shop; limitReached?: boolean }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -913,6 +930,66 @@ export class DatabaseStorage implements IStorage {
           sql`${userSubscriptions.status} IN ('active', 'past_due')`,
         ),
       );
+  }
+
+  async getSetting(key: string): Promise<string | undefined> {
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return row?.value;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    await db
+      .insert(appSettings)
+      .values({ key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+  }
+
+  async countFoundingMembers(): Promise<number> {
+    const [row] = await db
+      .select({ value: count() })
+      .from(shops)
+      .where(eq(shops.isFoundingMember, true));
+    return Number(row?.value ?? 0);
+  }
+
+  async setFoundingMember(
+    shopId: number,
+    enabled: boolean,
+    price: number,
+    limit: number,
+  ): Promise<{ shop?: Shop; limitReached?: boolean }> {
+    return db.transaction(async (tx) => {
+      // 동시에 두 명을 지정해 상한을 넘는 일이 없도록 지정 작업을 직렬화한다.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('founding_member'))`);
+
+      const [current] = await tx.select().from(shops).where(eq(shops.id, shopId));
+      if (!current) return {};
+
+      if (!enabled) {
+        const [shop] = await tx
+          .update(shops)
+          .set({ isFoundingMember: false, foundingPrice: null, foundingSince: null })
+          .where(eq(shops.id, shopId))
+          .returning();
+        return { shop };
+      }
+
+      // 이미 창립 멤버면 고정가를 건드리지 않는다.
+      if (current.isFoundingMember) return { shop: current };
+
+      const [row] = await tx
+        .select({ value: count() })
+        .from(shops)
+        .where(eq(shops.isFoundingMember, true));
+      if (Number(row?.value ?? 0) >= limit) return { limitReached: true };
+
+      const [shop] = await tx
+        .update(shops)
+        .set({ isFoundingMember: true, foundingPrice: price, foundingSince: new Date() })
+        .where(eq(shops.id, shopId))
+        .returning();
+      return { shop };
+    });
   }
 }
 

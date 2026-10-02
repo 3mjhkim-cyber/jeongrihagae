@@ -17,6 +17,11 @@
  * [2] 가맹점 관리 전용 페이지
  *   - PlatformAdmin에서 "전체 가맹점 관리" 버튼 클릭 시 이동
  *   - 목록이 길어져도 페이지네이션으로 탐색 가능
+ *
+ * [3] 요금 관리
+ *   - 기본요금 수정 (창립 멤버 매장은 각자 고정가라 영향 없음)
+ *   - 상세 모달에서 창립 멤버 지정/해제 ("N / 상한" 표시, 상한 초과 시 지정 불가)
+ *   - 변경 전 항상 확인 창을 띄운다
  */
 
 import { useAuth } from "@/hooks/use-auth";
@@ -25,7 +30,7 @@ import { useLocation } from "wouter";
 import {
   Loader2, Store, LogOut, Settings, Pencil, Trash2,
   CreditCard, Search, RefreshCw, ChevronRight, Building2,
-  Phone, Clock, ArrowLeft, ChevronLeft, User,
+  Phone, Clock, ArrowLeft, ChevronLeft, User, Crown, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +67,21 @@ type ShopWithOwner = Shop & {
   trialEndDate?: string | null;
   cancelReason?: string | null;
   cancelNote?: string | null;
+  monthlyPrice?: number;
 };
+
+/** /api/admin/pricing 응답 */
+type PricingInfo = {
+  basePrice: number;
+  foundingPrice: number;
+  foundingLimit: number;
+  foundingCount: number;
+};
+
+/** 확인 창에서 실행할 요금 관련 변경 */
+type PendingPricingAction =
+  | { kind: "basePrice"; value: number }
+  | { kind: "founding"; shop: ShopWithOwner; enabled: boolean };
 
 type ShopFilter = "all" | "active" | "inactive";
 
@@ -100,6 +119,20 @@ function SubDetailBadge({ status }: { status: string | null }) {
     return <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">무료체험 중</Badge>;
   }
   return <Badge variant="secondary">비활성</Badge>;
+}
+
+function won(n: number | null | undefined): string {
+  return n != null ? `${n.toLocaleString()}원` : "-";
+}
+
+/** 창립 멤버 배지 */
+function FoundingBadge() {
+  return (
+    <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs gap-1">
+      <Crown className="w-3 h-3" />
+      창립 멤버
+    </Badge>
+  );
 }
 
 function tierLabel(tier: string | null | undefined): string {
@@ -154,6 +187,56 @@ export default function ShopsAdmin() {
     enabled: !!user && user.role === "super_admin",
     refetchOnWindowFocus: true,
   });
+
+  // ── 요금 설정 조회 ────────────────────────────────────────────────────────
+  const { data: pricing } = useQuery<PricingInfo>({
+    queryKey: ["/api/admin/pricing"],
+    enabled: !!user && user.role === "super_admin",
+  });
+  const [basePriceInput, setBasePriceInput] = useState("");
+  const [pendingAction, setPendingAction] = useState<PendingPricingAction | null>(null);
+
+  useEffect(() => {
+    if (pricing) setBasePriceInput(String(pricing.basePrice));
+  }, [pricing?.basePrice]);
+
+  // ── Mutation: 기본요금 수정 ───────────────────────────────────────────────
+  const basePriceMutation = useMutation({
+    mutationFn: async (basePrice: number) => {
+      const res = await apiRequest("PATCH", "/api/admin/pricing", { basePrice });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+      toast({ title: "기본요금 변경 완료", description: "창립 멤버가 아닌 매장의 다음 결제부터 적용됩니다." });
+      setPendingAction(null);
+    },
+    onError: (e: Error) =>
+      toast({ title: "기본요금 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  // ── Mutation: 창립 멤버 지정/해제 ─────────────────────────────────────────
+  const foundingMutation = useMutation({
+    mutationFn: async ({ shopId, enabled }: { shopId: number; enabled: boolean }) => {
+      const res = await apiRequest("POST", `/api/admin/shops/${shopId}/founding`, { enabled });
+      return res.json();
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pricing"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+      toast({ title: vars.enabled ? "창립 멤버로 지정했습니다" : "창립 멤버를 해제했습니다" });
+      setPendingAction(null);
+      setDetailShop(null);
+    },
+    onError: (e: Error) =>
+      toast({ title: "창립 멤버 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const parsedBasePrice = Number(basePriceInput);
+  const basePriceValid =
+    Number.isInteger(parsedBasePrice) && parsedBasePrice >= 1000 && parsedBasePrice <= 1_000_000;
+  const foundingFull = !!pricing && pricing.foundingCount >= pricing.foundingLimit;
 
   // ── Mutation: 편집 ────────────────────────────────────────────────────────
   const editMutation = useMutation({
@@ -299,7 +382,55 @@ export default function ShopsAdmin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+        {/* ══════════════════════════════════════════════════════════════
+            요금 설정 박스
+        ══════════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-2xl border shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <h2 className="font-bold text-sm sm:text-base">요금 설정</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sa-base-price">기본요금 (월)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="sa-base-price"
+                  type="number"
+                  inputMode="numeric"
+                  value={basePriceInput}
+                  onChange={e => setBasePriceInput(e.target.value)}
+                  className={basePriceInput && !basePriceValid ? "border-red-400 focus-visible:ring-red-400" : ""}
+                />
+                <Button
+                  disabled={!pricing || !basePriceValid || parsedBasePrice === pricing.basePrice}
+                  onClick={() => setPendingAction({ kind: "basePrice", value: parsedBasePrice })}
+                >
+                  저장
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                창립 멤버가 아닌 매장에 다음 결제부터 적용됩니다. (1,000원 ~ 1,000,000원)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>창립 멤버</Label>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl font-bold ${foundingFull ? "text-red-500" : ""}`}>
+                  {pricing ? `${pricing.foundingCount} / ${pricing.foundingLimit}곳` : "-"}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  월 {won(pricing?.foundingPrice)} 평생 고정
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                가맹점을 눌러 상세 화면에서 지정/해제할 수 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* ══════════════════════════════════════════════════════════════
             가맹점 관리 박스
@@ -395,6 +526,7 @@ export default function ShopsAdmin() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm truncate">{shop.name}</span>
                       <StatusBadge status={shop.subscriptionStatus} />
+                      {shop.isFoundingMember && <FoundingBadge />}
                     </div>
                     {/* ownerEmail: 소유자 로그인 아이디 */}
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -403,6 +535,9 @@ export default function ShopsAdmin() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-xs font-medium whitespace-nowrap">
+                      {won(shop.monthlyPrice)}
+                    </span>
                     <span className="text-xs text-muted-foreground hidden sm:block">
                       {fmtDate(shop.createdAt)}
                     </span>
@@ -554,6 +689,10 @@ export default function ShopsAdmin() {
                     <SubDetailBadge status={detailShop.subscriptionStatus} />
                   </div>
                   <div>
+                    <p className="text-muted-foreground text-xs mb-0.5">월 요금</p>
+                    <p className="font-semibold">{won(detailShop.monthlyPrice)}</p>
+                  </div>
+                  <div>
                     <p className="text-muted-foreground text-xs mb-0.5">구독 시작</p>
                     <p className="font-medium">{fmtDate(detailShop.subscriptionStart)}</p>
                   </div>
@@ -586,6 +725,46 @@ export default function ShopsAdmin() {
                     </div>
                   )}
                 </div>
+              </section>
+
+              {/* ── 창립 멤버 ── */}
+              <section className="rounded-xl border p-4 space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5" />
+                  창립 멤버
+                  <span className="normal-case font-normal">
+                    ({pricing ? `${pricing.foundingCount} / ${pricing.foundingLimit}곳` : "-"})
+                  </span>
+                </h3>
+                {detailShop.isFoundingMember ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm">
+                      <p className="font-semibold">월 {won(detailShop.foundingPrice)} 고정</p>
+                      <p className="text-xs text-muted-foreground">지정일 {fmtDate(detailShop.foundingSince)}</p>
+                    </div>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => setPendingAction({ kind: "founding", shop: detailShop, enabled: false })}
+                    >
+                      해제
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {foundingFull
+                        ? "창립 멤버 자리가 모두 찼습니다."
+                        : `지정하면 월 ${won(pricing?.foundingPrice)}으로 평생 고정됩니다.`}
+                    </p>
+                    <Button
+                      size="sm"
+                      disabled={!pricing || foundingFull}
+                      onClick={() => setPendingAction({ kind: "founding", shop: detailShop, enabled: true })}
+                    >
+                      지정
+                    </Button>
+                  </div>
+                )}
               </section>
 
             </div>
@@ -744,6 +923,62 @@ export default function ShopsAdmin() {
             >
               {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          요금 변경 확인 다이얼로그 (기본요금 / 창립 멤버)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={!!pendingAction} onOpenChange={open => !open && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.kind === "basePrice"
+                ? "기본요금 변경"
+                : pendingAction?.enabled ? "창립 멤버 지정" : "창립 멤버 해제"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.kind === "basePrice" && (
+                <>
+                  기본요금을 <b>{won(pricing?.basePrice)}</b> → <b>{won(pendingAction.value)}</b>으로 바꿉니다.
+                  <br />창립 멤버가 아닌 모든 매장에 다음 결제부터 적용됩니다.
+                </>
+              )}
+              {pendingAction?.kind === "founding" && pendingAction.enabled && (
+                <>
+                  <b>{pendingAction.shop.name}</b>을(를) 창립 멤버로 지정합니다.
+                  <br />이 매장의 월 요금이 <b>{won(pricing?.foundingPrice)}</b>으로 평생 고정됩니다.
+                </>
+              )}
+              {pendingAction?.kind === "founding" && !pendingAction.enabled && (
+                <>
+                  <b>{pendingAction.shop.name}</b>의 창립 멤버를 해제합니다.
+                  <br />다음 결제부터 기본요금 <b>{won(pricing?.basePrice)}</b>이 청구되며,
+                  다시 지정하면 그 시점의 창립 멤버 가격이 적용됩니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={basePriceMutation.isPending || foundingMutation.isPending}
+              onClick={e => {
+                e.preventDefault();
+                if (!pendingAction) return;
+                if (pendingAction.kind === "basePrice") {
+                  basePriceMutation.mutate(pendingAction.value);
+                } else {
+                  foundingMutation.mutate({ shopId: pendingAction.shop.id, enabled: pendingAction.enabled });
+                }
+              }}
+            >
+              {(basePriceMutation.isPending || foundingMutation.isPending) && (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              )}
+              확인
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

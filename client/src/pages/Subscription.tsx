@@ -33,7 +33,6 @@ import * as PortOne from "@portone/browser-sdk/v2";
 
 // ─── 플랜 정의 ─────────────────────────────────────────────────────────────────
 const PLAN = {
-  price: 9_900,
   name: "스탠다드",
   features: [
     "무제한 예약 관리",
@@ -122,6 +121,9 @@ export default function Subscription() {
     enabled: !!user,
     select: (d: any) => d as SubData,
   });
+
+  // 월 요금은 서버가 매장별로 계산해서 내려준다 (창립 멤버면 고정가, 아니면 기본요금)
+  const priceLabel = sub?.planPrice != null ? sub.planPrice.toLocaleString() : "-";
 
   const { data: payments } = useQuery<PaymentRecord[]>({
     queryKey: ["/api/subscription/payments"],
@@ -281,7 +283,7 @@ export default function Subscription() {
           <div className="rounded-xl border border-primary/20 shadow-sm p-6 bg-card mb-4">
             <div className="text-center mb-5">
               <p className="text-sm text-muted-foreground mb-1">{PLAN.name} 플랜</p>
-              <p className="text-4xl font-bold">{PLAN.price.toLocaleString()}<span className="text-xl font-normal text-muted-foreground">원/월</span></p>
+              <p className="text-4xl font-bold">{priceLabel}<span className="text-xl font-normal text-muted-foreground">원/월</span></p>
             </div>
             <ul className="space-y-2.5 mb-6">
               {PLAN.features.map((f) => (
@@ -333,7 +335,7 @@ export default function Subscription() {
             <div className="text-center mb-5">
               <p className="text-sm text-muted-foreground mb-1">{PLAN.name} 플랜</p>
               <p className="text-4xl font-bold">
-                {PLAN.price.toLocaleString()}
+                {priceLabel}
                 <span className="text-xl font-normal text-muted-foreground">원/월</span>
               </p>
             </div>
@@ -353,7 +355,7 @@ export default function Subscription() {
                 : <><CreditCard className="w-4 h-4 mr-2" />지금 구독 시작하기</>}
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-3">
-              카드 등록 즉시 {PLAN.price.toLocaleString()}원 결제 후 모든 기능 이용 가능
+              카드 등록 즉시 {priceLabel}원 결제 후 모든 기능 이용 가능
             </p>
           </div>
 
@@ -425,7 +427,7 @@ export default function Subscription() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                월간 · {PLAN.price.toLocaleString()}원/월
+                월간 · {priceLabel}원/월
               </p>
               {status === "active" && sub?.nextBillingDate && (
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -480,7 +482,7 @@ export default function Subscription() {
           <div className="py-6 border-b">
             <h2 className="font-semibold mb-1">결제</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              카드를 등록하면 즉시 {PLAN.price.toLocaleString()}원이 결제되고 구독이 시작됩니다.
+              카드를 등록하면 즉시 {priceLabel}원이 결제되고 구독이 시작됩니다.
             </p>
             <Button onClick={handleRegisterCard} disabled={isRegisteringCard} variant={status === "pending_payment" ? "default" : "outline"}>
               {isRegisteringCard ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />처리 중...</> : <><CreditCard className="w-4 h-4 mr-2" />카드 등록하고 구독 시작</>}
@@ -590,7 +592,7 @@ export default function Subscription() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">결제 금액</span>
-              <span className="font-bold text-primary">{PLAN.price.toLocaleString()}원</span>
+              <span className="font-bold text-primary">{priceLabel}원</span>
             </div>
           </div>
           <DialogFooter className="gap-2">

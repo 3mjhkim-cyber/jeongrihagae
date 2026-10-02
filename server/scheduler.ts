@@ -15,7 +15,8 @@
 
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { chargeBillingKey, PLAN_PRICE, MAX_FAIL_COUNT } from "./billing";
+import { chargeBillingKey, MAX_FAIL_COUNT } from "./billing";
+import { getUserPrice } from "./pricing";
 
 // ─── 날짜 유틸 ───────────────────────────────────────────────────────────────
 
@@ -115,12 +116,14 @@ async function processRecurringBillings(): Promise<void> {
     const orderId = `sub_${sub.userId}_${randomBytes(4).toString("hex")}`;
     const now = new Date();
 
-    const result = await chargeBillingKey(sub.billingKey, sub.userId, orderId);
+    // 창립 멤버면 고정가, 아니면 현재 기본요금
+    const amount = await getUserPrice(sub.userId);
+    const result = await chargeBillingKey(sub.billingKey, sub.userId, orderId, amount);
 
     // 결제 내역 저장
     await storage.createUserPayment({
       userId: sub.userId,
-      amount: PLAN_PRICE,
+      amount,
       attemptedAt: now,
       paidAt: result.success ? now : null,
       result: result.success ? "success" : "fail",

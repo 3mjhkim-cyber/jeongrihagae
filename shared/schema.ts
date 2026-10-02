@@ -33,7 +33,20 @@ export const shops = pgTable("shops", {
   subscriptionTier: text("subscription_tier").default("basic"), // basic, premium, enterprise
   subscriptionStart: timestamp("subscription_start"),
   subscriptionEnd: timestamp("subscription_end"),
+  // 창립 멤버: 슈퍼관리자만 지정. 지정 시점의 창립 멤버 가격을 founding_price 에 고정 저장해
+  // 나중에 기본요금·창립 멤버 가격 설정이 바뀌어도 이 매장의 월 요금은 바뀌지 않는다.
+  isFoundingMember: boolean("is_founding_member").default(false).notNull(),
+  foundingPrice: integer("founding_price"),
+  foundingSince: timestamp("founding_since"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ─── 앱 전역 설정 (key-value) ──────────────────────────────────────────────────
+// 요금 등 운영 중 슈퍼관리자가 바꾸는 값. 키 목록과 기본값은 server/pricing.ts 참고.
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const users = pgTable("users", {
@@ -118,7 +131,7 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// ─── 사용자별 구독 빌링 (단일 플랜 39,000원/월) ────────────────────────────────
+// ─── 사용자별 구독 빌링 (월 요금은 server/pricing.ts 의 getUserPrice) ──────────
 // status 흐름:
 //   trialing → pending_payment (D-3 또는 체험 만료) → active (첫 결제 성공)
 //                                                    → past_due (결제 실패/재시도)
@@ -155,7 +168,7 @@ export const notificationLogs = pgTable("notification_logs", {
 export const userPayments = pgTable("user_payments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
-  amount: integer("amount").notNull(),          // 9900
+  amount: integer("amount").notNull(),          // 실제 청구 금액 (KRW)
   attemptedAt: timestamp("attempted_at").notNull(),
   paidAt: timestamp("paid_at"),                 // nullable: 실패 시 null
   result: text("result").notNull(),             // success | fail
@@ -164,7 +177,7 @@ export const userPayments = pgTable("user_payments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, isApproved: true, subscriptionStatus: true, subscriptionStart: true, subscriptionEnd: true });
+export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, isApproved: true, subscriptionStatus: true, subscriptionStart: true, subscriptionEnd: true, isFoundingMember: true, foundingPrice: true, foundingSince: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, visitCount: true, lastVisit: true, firstVisitDate: true, createdAt: true, updatedAt: true });
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true, isActive: true });
@@ -188,6 +201,8 @@ export type UserSubscription = typeof userSubscriptions.$inferSelect;
 export type UserPayment = typeof userPayments.$inferSelect;
 export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
 export type InsertUserPayment = typeof userPayments.$inferInsert;
+
+export type AppSetting = typeof appSettings.$inferSelect;
 
 export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type InsertNotificationLog = typeof notificationLogs.$inferInsert;
