@@ -117,17 +117,28 @@ export function currentPeriod(anchor: Date, now = new Date()): { start: Date; en
 }
 
 /**
- * 한도 기간의 기준일
- * 1. 카카오페이 정기결제 중이면 마지막 결제일 (결제될 때마다 바뀌어 결제일에 맞춰 초기화)
- * 2. 관리자가 수동으로 유료 활성화한 매장이면 활성화 시작일
- * 3. 그 외: 마지막 결제일 → 무료체험 시작일 → 매장 가입일 순
+ * 한도 기간 계산
+ * 1. 카카오페이 정기결제 중이면 마지막 결제일부터 한 달 (결제될 때마다 초기화)
+ * 2. 관리자가 수동으로 유료 활성화한 매장이면 관리자가 정한 시작일 ~ 만료일
+ *    (한 달보다 길면 시작일 기준으로 매달 초기화하고, 마지막 기간은 만료일에서 끝남)
+ * 3. 그 외: 마지막 결제일 → 무료체험 시작일 → 매장 가입일 기준으로 매달
  */
-async function getPeriodAnchor(shop: Shop): Promise<Date> {
+async function getMessagePeriod(shop: Shop): Promise<{ start: Date; end: Date }> {
   const owner = await storage.getUserByShopId(shop.id);
   const sub = owner ? await storage.getUserSubscription(owner.id) : undefined;
-  if (sub?.status === 'active' && sub.lastBillingAt) return new Date(sub.lastBillingAt);
-  if (shop.subscriptionStatus === 'active' && shop.subscriptionStart) return new Date(shop.subscriptionStart);
-  return new Date(sub?.lastBillingAt ?? sub?.trialStartDate ?? shop.createdAt);
+
+  if (sub?.status === 'active' && sub.lastBillingAt) {
+    return currentPeriod(new Date(sub.lastBillingAt));
+  }
+  if (shop.subscriptionStatus === 'active' && shop.subscriptionStart) {
+    const period = currentPeriod(new Date(shop.subscriptionStart));
+    if (shop.subscriptionEnd) {
+      const manualEnd = new Date(shop.subscriptionEnd);
+      if (manualEnd < period.end) period.end = manualEnd;
+    }
+    return period;
+  }
+  return currentPeriod(new Date(sub?.lastBillingAt ?? sub?.trialStartDate ?? shop.createdAt));
 }
 
 export async function isMessageLimitEnforced(): Promise<boolean> {
@@ -151,8 +162,7 @@ export interface MessageUsage {
 export async function getMessageUsage(shopId: number): Promise<MessageUsage | undefined> {
   const shop = await storage.getShop(shopId);
   if (!shop) return undefined;
-  const anchor = await getPeriodAnchor(shop);
-  const { start, end } = currentPeriod(anchor);
+  const { start, end } = await getMessagePeriod(shop);
   const [used, enforced] = await Promise.all([
     storage.countSentMessagesSince(shopId, start),
     isMessageLimitEnforced(),
