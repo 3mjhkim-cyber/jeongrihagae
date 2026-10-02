@@ -38,6 +38,8 @@ export const shops = pgTable("shops", {
   isFoundingMember: boolean("is_founding_member").default(false).notNull(),
   foundingPrice: integer("founding_price"),
   foundingSince: timestamp("founding_since"),
+  // 알림톡 월 한도 (300/400/500, 슈퍼관리자가 변경). 결제일마다 초기화. server/messaging.ts 참고
+  messageLimit: integer("message_limit").default(300).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -159,7 +161,7 @@ export const notificationLogs = pgTable("notification_logs", {
   reservationId: integer("reservation_id").references(() => bookings.id),
   templateType: text("template_type").notNull(), // bookingConfirmed | depositGuide | reminderBefore | bookingCancelled
   phone: text("phone").notNull(),
-  status: text("status").notNull(), // sent | failed
+  status: text("status").notNull(), // sent | failed | blocked(한도 초과로 미발송)
   providerMessageId: text("provider_message_id"),
   errorMessage: text("error_message"),
   sentAt: timestamp("sent_at").defaultNow().notNull(),
@@ -177,7 +179,7 @@ export const userPayments = pgTable("user_payments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, isApproved: true, subscriptionStatus: true, subscriptionStart: true, subscriptionEnd: true, isFoundingMember: true, foundingPrice: true, foundingSince: true });
+export const insertShopSchema = createInsertSchema(shops).omit({ id: true, createdAt: true, isApproved: true, subscriptionStatus: true, subscriptionStart: true, subscriptionEnd: true, isFoundingMember: true, foundingPrice: true, foundingSince: true, messageLimit: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, visitCount: true, lastVisit: true, firstVisitDate: true, createdAt: true, updatedAt: true });
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true, isActive: true });

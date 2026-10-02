@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import type { Customer, Booking } from "@shared/schema";
 import { formatKoreanPhone } from "@/lib/phone";
+import { MessageUsageCard } from "@/components/MessageUsageCard";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
@@ -77,6 +78,17 @@ export default function Dashboard() {
         description: "리마인드가 전송된 것으로 표시되었습니다.",
       });
       queryClient.invalidateQueries({ queryKey: [api.bookings.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shop/message-usage"] });
+      setRemindBooking(null);
+    },
+    onError: (err: Error) => {
+      // apiRequest 오류 메시지 형식: "409: {\"message\":\"...\"}"
+      let description = err.message;
+      try {
+        description = JSON.parse(err.message.replace(/^\d+:\s*/, "")).message ?? description;
+      } catch {}
+      toast({ title: "리마인드를 보내지 못했어요", description, variant: "destructive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/shop/message-usage"] });
       setRemindBooking(null);
     },
   });
@@ -394,6 +406,7 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {user.role === 'shop_owner' && user.shopId && <MessageUsageCard />}
         {isBookingsLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />

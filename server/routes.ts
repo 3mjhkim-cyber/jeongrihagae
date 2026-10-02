@@ -1,4 +1,3 @@
-import { SolapiMessageService } from "solapi";
 import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
@@ -12,6 +11,7 @@ import { promisify } from "util";
 import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
 import { chargeBillingKey } from "./billing";
+import { sendAndLog, sendMessage, getMessageUsage, isMessageLimitEnforced, setMessageLimitEnforced, MESSAGE_LIMIT_OPTIONS, type KakaoTemplateType } from "./messaging";
 import { ensurePricingSettings, getPricingSettings, getUserPrice, priceForShop, PRICING_KEYS } from "./pricing";
 import { addOneMonth } from "./scheduler";
 import { Webhook } from "@portone/server-sdk";
@@ -20,29 +20,8 @@ const scryptAsync = promisify(scrypt);
 
 // ─── 카카오 알림톡 고정 템플릿 시스템 ────────────────────────────────────────────
 
-/**
- * 알림 유형 키
- * 카카오 알림톡 심사 통과 후 templateCode를 각 항목에 매핑하세요.
- */
-export type KakaoTemplateType =
-  | 'bookingConfirmed'   // 예약 확정
-  | 'depositGuide'       // 예약금 안내
-  | 'reminderBefore'     // 방문 전 리마인드
-  | 'bookingCancelled';  // 예약 취소
-
 /** 활성화 여부 저장 JSON 구조 */
 type NotifEnabled = Partial<Record<KakaoTemplateType, boolean>>;
-
-/**
- * 솔라피에서 발급받은 카카오 알림톡 템플릿 코드 매핑
- * 심사 통과 후 .env에 각 코드를 입력하세요.
- */
-const KAKAO_TEMPLATE_CODES: Record<KakaoTemplateType, string> = {
-  bookingConfirmed:  process.env.KAKAO_TEMPLATE_CODE_BOOKING_CONFIRMED  || '',
-  depositGuide:      process.env.KAKAO_TEMPLATE_CODE_DEPOSIT_GUIDE       || '',
-  reminderBefore:    process.env.KAKAO_TEMPLATE_CODE_REMINDER_BEFORE     || '',
-  bookingCancelled:  process.env.KAKAO_TEMPLATE_CODE_BOOKING_CANCELLED   || '',
-};
 
 /** 고정 템플릿 정의 – 카카오 알림톡 심사 양식과 동일하게 유지 */
 const KAKAO_TEMPLATES: Record<KakaoTemplateType, string> = {
@@ -188,112 +167,6 @@ function buildKakaoMessage(
   }
 
   return message;
-}
-
-/**
- * 알림톡 발송 + 로그 저장.
- *
- * TODO: 카카오 / SMS API 연동 시 sendKakaoAlimtalk() 내부를 교체:
- *   - Solapi: https://solapi.com
- *   - 카카오 비즈니스 채널 알림톡 API 직접 연동
- *
- * 반환값: { success, providerMessageId?, errorMessage? }
- */
-async function sendKakaoAlimtalk(
-  phone: string,
-  message: string,
-  templateType: KakaoTemplateType,
-): Promise<{ success: boolean; providerMessageId?: string; errorMessage?: string }> {
-  const masked = phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
-  console.log(`\n[알림톡 발송 시작] type=${templateType} to=${masked}`);
-  console.log(`[알림톡 내용]\n${message}\n`);
-
-  const apiKey    = process.env.SOLAPI_API_KEY;
-  const apiSecret = process.env.SOLAPI_API_SECRET;
-  const pfId      = process.env.KAKAO_PFID;
-  const from      = process.env.SOLAPI_SENDER_PHONE;
-  const templateId = KAKAO_TEMPLATE_CODES[templateType];
-
-  console.log(`[환경변수 확인]`);
-  console.log(`  - SOLAPI_API_KEY: ${apiKey ? '✓' : '✗'}`);
-  console.log(`  - SOLAPI_API_SECRET: ${apiSecret ? '✓' : '✗'}`);
-  console.log(`  - KAKAO_PFID: ${pfId ? '✓' : '✗'}`);
-  console.log(`  - SOLAPI_SENDER_PHONE: ${from ? '✓' : '✗'}`);
-  console.log(`  - KAKAO_TEMPLATE_CODE_${templateType.toUpperCase()}: ${templateId ? '✓' : '✗'}`);
-
-  if (!apiKey || !apiSecret || !pfId || !from) {
-    console.warn('[알림톡] 솔라피 환경변수 미설정 — 발송 건너뜀');
-    return { success: false, errorMessage: '솔라피 환경변수 미설정' };
-  }
-
-  if (!templateId) {
-    console.warn(`[알림톡] 템플릿 코드 미설정 (type=${templateType}) — 발송 건너뜀`);
-    return { success: false, errorMessage: `템플릿 코드 미설정: ${templateType}` };
-  }
-
-  try {
-    console.log('[Solapi 인스턴스 생성 중...]');
-    const solapi = new SolapiMessageService(apiKey, apiSecret);
-    
-    console.log('[Solapi 메시지 발송 중...]');
-    const result = await solapi.sendOne({
-      to: phone,
-      from,
-      type: 'ATA',
-      text: message,
-      kakaoOptions: {
-        pfId,
-        templateId,
-      },
-    });
-    
-    console.log(`[알림톡 발송 성공] messageId=${result.messageId}`);
-    return { success: true, providerMessageId: result.messageId };
-  } catch (err: any) {
-    console.error('[알림톡 발송 실패]', {
-      message: err?.message,
-      stack: err?.stack,
-      fullError: JSON.stringify(err, null, 2),
-    });
-    return { success: false, errorMessage: err?.message };
-  }
-}
-
-/**
- * 알림 발송 + 로그 저장 통합 함수.
- */
-async function sendAndLog(opts: {
-  templateType: KakaoTemplateType;
-  phone: string;
-  message: string;
-  shopId: number;
-  reservationId?: number;
-}): Promise<void> {
-  const { templateType, phone, message, shopId, reservationId } = opts;
-
-  console.log(`\n[sendAndLog 호출] templateType=${templateType}, shopId=${shopId}, reservationId=${reservationId}`);
-  const masked = phone.replace(/(\d{3})-?(\d{3,4})-?(\d{4})/, '$1-****-$3');
-  console.log(`[고객연락처] ${masked}`);
-
-  const result = await sendKakaoAlimtalk(phone, message, templateType);
-  console.log(`[발송결과] success=${result.success}, messageId=${result.providerMessageId}, error=${result.errorMessage}`);
-
-  try {
-    const db = (await import('./db')).db;
-    const { notificationLogs } = await import('@shared/schema');
-    await db.insert(notificationLogs).values({
-      shopId,
-      reservationId: reservationId ?? null,
-      templateType,
-      phone,
-      status: result.success ? 'sent' : 'failed',
-      providerMessageId: result.providerMessageId ?? null,
-      errorMessage: result.errorMessage ?? null,
-    });
-    console.log(`[알림로그 저장] 완료`);
-  } catch (logErr) {
-    console.error('[알림 로그 저장 실패]', logErr);
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -638,19 +511,13 @@ export async function registerRoutes(
 
     await storage.updateUserResetCode(user.id, code, expires);
 
-    const apiKey = process.env.SOLAPI_API_KEY;
-    const apiSecret = process.env.SOLAPI_API_SECRET;
-    const from = process.env.SOLAPI_SENDER_PHONE;
-
-    if (apiKey && apiSecret && from) {
-      try {
-        const solapi = new SolapiMessageService(apiKey, apiSecret);
-        await solapi.sendOne({ to: user.phone, from, text: `[정리하개] 비밀번호 재설정 인증번호: ${code} (10분 내 입력)` });
-      } catch (err: any) {
-        console.error('[비밀번호 찾기 SMS 발송 실패]', err?.message);
-      }
-    } else {
-      console.warn('[비밀번호 찾기] 솔라피 환경변수 미설정 — 인증번호:', code);
+    // 매장 알림톡이 아니므로 매장 한도와 무관하게 발송한다
+    const smsResult = await sendMessage({
+      to: user.phone,
+      text: `[정리하개] 비밀번호 재설정 인증번호: ${code} (10분 내 입력)`,
+    });
+    if (!smsResult.success) {
+      console.error('[비밀번호 찾기 SMS 발송 실패]', smsResult.errorMessage);
     }
 
     res.json({ message: '인증번호를 발송했습니다.' });
@@ -981,6 +848,12 @@ export async function registerRoutes(
         monthlyPrice: priceForShop(s, basePrice),
       };
     });
+
+    // 이번 기간 알림톡 사용량
+    const usages = await Promise.all(shops.map(s => getMessageUsage(s.id)));
+    result.forEach((r, i) => {
+      (r as any).messageUsed = usages[i]?.used ?? 0;
+    });
     res.json(result);
   });
 
@@ -1024,6 +897,35 @@ export async function registerRoutes(
     );
     const foundingCount = await storage.countFoundingMembers();
     res.json({ shop: result.shop, foundingCount, foundingLimit });
+  });
+
+  // ── 알림톡 한도 (슈퍼관리자) ──────────────────────────────────────────────
+  // 한도 초과 시 리마인드 차단 스위치
+  app.get('/api/admin/message-settings', requireSuperAdmin, async (_req, res) => {
+    res.json({ enforced: await isMessageLimitEnforced(), limitOptions: MESSAGE_LIMIT_OPTIONS });
+  });
+
+  app.patch('/api/admin/message-settings', requireSuperAdmin, async (req, res) => {
+    const enforced = req.body?.enforced;
+    if (typeof enforced !== 'boolean') {
+      return res.status(400).json({ message: '요청 형식이 올바르지 않습니다.' });
+    }
+    await setMessageLimitEnforced(enforced);
+    console.log(`[admin] 알림톡 한도 차단 ${enforced ? 'ON' : 'OFF'} by userId=${(req.user as any).id}`);
+    res.json({ enforced, limitOptions: MESSAGE_LIMIT_OPTIONS });
+  });
+
+  // 매장별 월 한도 변경 (300/400/500)
+  app.patch('/api/admin/shops/:id/message-limit', requireSuperAdmin, async (req, res) => {
+    const shopId = Number(req.params.id);
+    const limit = Number(req.body?.limit);
+    if (!Number.isInteger(shopId) || !(MESSAGE_LIMIT_OPTIONS as readonly number[]).includes(limit)) {
+      return res.status(400).json({ message: `한도는 ${MESSAGE_LIMIT_OPTIONS.join(' / ')}통 중에서 선택해주세요.` });
+    }
+    const shop = await storage.updateShop(shopId, { messageLimit: limit });
+    if (!shop) return res.status(404).json({ message: "가맹점을 찾을 수 없습니다." });
+    console.log(`[admin] 알림톡 한도 변경: shopId=${shopId} → ${limit}통 by userId=${(req.user as any).id}`);
+    res.json(shop);
   });
 
   // 슈퍼관리자용 가맹점 정보 수정
@@ -1163,6 +1065,15 @@ export async function registerRoutes(
       depositAmount: shop.depositAmount,
       depositRequired: shop.depositRequired,
     });
+  });
+
+  // ── 알림톡 한도 사용량 (사장님 대시보드) ─────────────────────────────────────
+  app.get('/api/shop/message-usage', requireShopOwner, async (req, res) => {
+    const user = req.user as any;
+    if (!user.shopId) return res.status(400).json({ message: 'No shop associated' });
+    const usage = await getMessageUsage(user.shopId);
+    if (!usage) return res.status(404).json({ message: 'Shop not found' });
+    res.json(usage);
   });
 
   // ── 알림톡 발송 로그 조회 ──────────────────────────────────────────────────────
@@ -1543,7 +1454,13 @@ export async function registerRoutes(
         const notifEnabled = parseNotifEnabled(shop);
         if (notifEnabled.reminderBefore) {
           const message = buildKakaoMessage('reminderBefore', booking, shop as any);
-          await sendAndLog({ templateType: 'reminderBefore', phone: booking.customerPhone, message, shopId, reservationId: bookingId });
+          const result = await sendAndLog({ templateType: 'reminderBefore', phone: booking.customerPhone, message, shopId, reservationId: bookingId });
+          if (result.blocked) {
+            // 한도 초과로 발송되지 않았으므로 '전송 완료'로 표시하지 않는다
+            return res.status(409).json({
+              message: '이번 달 알림톡 한도를 모두 사용해 리마인드를 보낼 수 없습니다. 다음 결제일에 초기화됩니다.',
+            });
+          }
         }
       }
     }

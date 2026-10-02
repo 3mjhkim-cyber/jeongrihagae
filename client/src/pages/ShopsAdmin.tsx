@@ -22,6 +22,10 @@
  *   - 기본요금 수정 (창립 멤버 매장은 각자 고정가라 영향 없음)
  *   - 상세 모달에서 창립 멤버 지정/해제 ("N / 상한" 표시, 상한 초과 시 지정 불가)
  *   - 변경 전 항상 확인 창을 띄운다
+ *
+ * [4] 알림톡 한도
+ *   - 목록·상세에 이번 기간 사용량 / 한도 표시, 상세에서 한도 300/400/500 변경
+ *   - 요금 설정 박스의 스위치로 "한도 초과 시 리마인드 차단" 켜기/끄기
  */
 
 import { useAuth } from "@/hooks/use-auth";
@@ -30,7 +34,7 @@ import { useLocation } from "wouter";
 import {
   Loader2, Store, LogOut, Settings, Pencil, Trash2,
   CreditCard, Search, RefreshCw, ChevronRight, Building2,
-  Phone, Clock, ArrowLeft, ChevronLeft, User, Crown, Wallet,
+  Phone, Clock, ArrowLeft, ChevronLeft, User, Crown, Wallet, MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +72,13 @@ type ShopWithOwner = Shop & {
   cancelReason?: string | null;
   cancelNote?: string | null;
   monthlyPrice?: number;
+  messageUsed?: number;
+};
+
+/** /api/admin/message-settings 응답 */
+type MessageSettings = {
+  enforced: boolean;
+  limitOptions: number[];
 };
 
 /** /api/admin/pricing 응답 */
@@ -81,7 +92,9 @@ type PricingInfo = {
 /** 확인 창에서 실행할 요금 관련 변경 */
 type PendingPricingAction =
   | { kind: "basePrice"; value: number }
-  | { kind: "founding"; shop: ShopWithOwner; enabled: boolean };
+  | { kind: "founding"; shop: ShopWithOwner; enabled: boolean }
+  | { kind: "messageLimit"; shop: ShopWithOwner; limit: number }
+  | { kind: "enforce"; enabled: boolean };
 
 type ShopFilter = "all" | "active" | "inactive";
 
@@ -232,6 +245,49 @@ export default function ShopsAdmin() {
     onError: (e: Error) =>
       toast({ title: "창립 멤버 변경 실패", description: e.message, variant: "destructive" }),
   });
+
+  // ── 알림톡 한도 설정 ─────────────────────────────────────────────────────
+  const { data: messageSettings } = useQuery<MessageSettings>({
+    queryKey: ["/api/admin/message-settings"],
+    enabled: !!user && user.role === "super_admin",
+  });
+  const [messageLimitInput, setMessageLimitInput] = useState(300);
+  useEffect(() => {
+    if (detailShop) setMessageLimitInput(detailShop.messageLimit);
+  }, [detailShop]);
+
+  const enforceMutation = useMutation({
+    mutationFn: async (enforced: boolean) => {
+      const res = await apiRequest("PATCH", "/api/admin/message-settings", { enforced });
+      return res.json();
+    },
+    onSuccess: (_d, enforced) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/message-settings"] });
+      toast({ title: enforced ? "한도 초과 차단을 켰습니다" : "한도 초과 차단을 껐습니다" });
+      setPendingAction(null);
+    },
+    onError: (e: Error) =>
+      toast({ title: "설정 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const messageLimitMutation = useMutation({
+    mutationFn: async ({ shopId, limit }: { shopId: number; limit: number }) => {
+      const res = await apiRequest("PATCH", `/api/admin/shops/${shopId}/message-limit`, { limit });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/shops"] });
+      toast({ title: "알림톡 한도를 변경했습니다" });
+      setPendingAction(null);
+      setDetailShop(null);
+    },
+    onError: (e: Error) =>
+      toast({ title: "한도 변경 실패", description: e.message, variant: "destructive" }),
+  });
+
+  const isPricingPending =
+    basePriceMutation.isPending || foundingMutation.isPending ||
+    enforceMutation.isPending || messageLimitMutation.isPending;
 
   const parsedBasePrice = Number(basePriceInput);
   const basePriceValid =
@@ -430,6 +486,23 @@ export default function ShopsAdmin() {
               </p>
             </div>
           </div>
+          <div className="mt-5 pt-4 border-t flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="sa-enforce" className="flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4" />
+                알림톡 한도 초과 시 리마인드 차단
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                켜면 한도를 넘은 매장은 방문 전 리마인드가 발송되지 않습니다. (예약 확정·예약금·취소 알림은 항상 발송)
+              </p>
+            </div>
+            <Switch
+              id="sa-enforce"
+              checked={messageSettings?.enforced ?? false}
+              disabled={!messageSettings}
+              onCheckedChange={v => setPendingAction({ kind: "enforce", enabled: v })}
+            />
+          </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
@@ -535,6 +608,14 @@ export default function ShopsAdmin() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
+                    <span
+                      className={`text-xs whitespace-nowrap hidden sm:block ${
+                        (shop.messageUsed ?? 0) >= shop.messageLimit ? "text-red-600 font-semibold"
+                        : (shop.messageUsed ?? 0) >= shop.messageLimit * 0.8 ? "text-amber-600 font-semibold"
+                        : "text-muted-foreground"}`}
+                    >
+                      알림톡 {shop.messageUsed ?? 0}/{shop.messageLimit}
+                    </span>
                     <span className="text-xs font-medium whitespace-nowrap">
                       {won(shop.monthlyPrice)}
                     </span>
@@ -724,6 +805,38 @@ export default function ShopsAdmin() {
                       <p className="font-medium whitespace-pre-wrap">{detailShop.cancelNote}</p>
                     </div>
                   )}
+                </div>
+              </section>
+
+              {/* ── 알림톡 한도 ── */}
+              <section className="rounded-xl border p-4 space-y-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  알림톡 한도
+                </h3>
+                <p className="text-sm">
+                  이번 기간 사용 <b>{detailShop.messageUsed ?? 0}</b> / {detailShop.messageLimit}통
+                  <span className="text-muted-foreground">
+                    {" "}(남은 {Math.max(0, detailShop.messageLimit - (detailShop.messageUsed ?? 0))}통)
+                  </span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="flex h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={messageLimitInput}
+                    onChange={e => setMessageLimitInput(Number(e.target.value))}
+                  >
+                    {(messageSettings?.limitOptions ?? [300, 400, 500]).map(n => (
+                      <option key={n} value={n}>{n}통</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm" variant="outline"
+                    disabled={messageLimitInput === detailShop.messageLimit}
+                    onClick={() => setPendingAction({ kind: "messageLimit", shop: detailShop, limit: messageLimitInput })}
+                  >
+                    한도 변경
+                  </Button>
                 </div>
               </section>
 
@@ -935,8 +1048,9 @@ export default function ShopsAdmin() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingAction?.kind === "basePrice"
-                ? "기본요금 변경"
+              {pendingAction?.kind === "basePrice" ? "기본요금 변경"
+                : pendingAction?.kind === "messageLimit" ? "알림톡 한도 변경"
+                : pendingAction?.kind === "enforce" ? (pendingAction.enabled ? "한도 초과 차단 켜기" : "한도 초과 차단 끄기")
                 : pendingAction?.enabled ? "창립 멤버 지정" : "창립 멤버 해제"}
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -959,23 +1073,41 @@ export default function ShopsAdmin() {
                   다시 지정하면 그 시점의 창립 멤버 가격이 적용됩니다.
                 </>
               )}
+              {pendingAction?.kind === "messageLimit" && (
+                <>
+                  <b>{pendingAction.shop.name}</b>의 알림톡 월 한도를{" "}
+                  <b>{pendingAction.shop.messageLimit}통</b> → <b>{pendingAction.limit}통</b>으로 바꿉니다.
+                  <br />이번 기간부터 바로 적용됩니다.
+                </>
+              )}
+              {pendingAction?.kind === "enforce" && (
+                pendingAction.enabled ? (
+                  <>한도를 넘은 매장은 <b>방문 전 리마인드가 발송되지 않습니다.</b><br />예약 확정·예약금 안내·예약 취소 알림은 계속 발송됩니다.</>
+                ) : (
+                  <>한도를 넘어도 모든 알림톡이 계속 발송됩니다.<br />초과분 알림톡 비용은 운영자가 부담하게 됩니다.</>
+                )
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction
-              disabled={basePriceMutation.isPending || foundingMutation.isPending}
+              disabled={isPricingPending}
               onClick={e => {
                 e.preventDefault();
                 if (!pendingAction) return;
                 if (pendingAction.kind === "basePrice") {
                   basePriceMutation.mutate(pendingAction.value);
-                } else {
+                } else if (pendingAction.kind === "founding") {
                   foundingMutation.mutate({ shopId: pendingAction.shop.id, enabled: pendingAction.enabled });
+                } else if (pendingAction.kind === "messageLimit") {
+                  messageLimitMutation.mutate({ shopId: pendingAction.shop.id, limit: pendingAction.limit });
+                } else {
+                  enforceMutation.mutate(pendingAction.enabled);
                 }
               }}
             >
-              {(basePriceMutation.isPending || foundingMutation.isPending) && (
+              {isPricingPending && (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               )}
               확인
