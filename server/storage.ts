@@ -1,4 +1,4 @@
-import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, appSettings, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
+import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, appSettings, notificationLogs, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, and, count, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -93,6 +93,9 @@ export interface IStorage {
   // 앱 설정 (요금 등)
   getSetting(key: string): Promise<string | undefined>;
   setSetting(key: string, value: string): Promise<void>;
+
+  // 알림톡 사용량: since 이후 성공 발송 건수
+  countSentMessagesSince(shopId: number, since: Date): Promise<number>;
 
   // 창립 멤버
   countFoundingMembers(): Promise<number>;
@@ -942,6 +945,20 @@ export class DatabaseStorage implements IStorage {
       .insert(appSettings)
       .values({ key, value, updatedAt: new Date() })
       .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+  }
+
+  async countSentMessagesSince(shopId: number, since: Date): Promise<number> {
+    const [row] = await db
+      .select({ value: count() })
+      .from(notificationLogs)
+      .where(
+        and(
+          eq(notificationLogs.shopId, shopId),
+          eq(notificationLogs.status, "sent"),
+          gte(notificationLogs.sentAt, since),
+        ),
+      );
+    return Number(row?.value ?? 0);
   }
 
   async countFoundingMembers(): Promise<number> {
