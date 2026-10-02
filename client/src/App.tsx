@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,12 +17,11 @@ import Calendar from "@/pages/Calendar";
 import Deposit from "@/pages/Deposit";
 import PlatformAdmin from "@/pages/PlatformAdmin";
 import ShopsAdmin from "@/pages/ShopsAdmin";
+import AuditLogs from "@/pages/AuditLogs";
 import ShopSettings from "@/pages/ShopSettings";
 import Operations from "@/pages/Operations";
 import Revenue from "@/pages/Revenue";
 import Subscription from "@/pages/Subscription";
-import PaymentSuccess from "@/pages/PaymentSuccess";
-import PaymentFail from "@/pages/PaymentFail";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Refund from "@/pages/Refund";
@@ -50,12 +49,15 @@ function Router() {
           <Route path="/admin/operations" component={Operations} />
           <Route path="/admin/revenue" component={Revenue} />
           <Route path="/admin/subscription" component={Subscription} />
-          <Route path="/admin/platform" component={PlatformAdmin} />
           {/* 가맹점 관리 전용 페이지 — 전체 목록/검색/페이지네이션 */}
-          <Route path="/admin/shops" component={ShopsAdmin} />
+          {/* 슈퍼관리자 화면 (사장님 화면 /admin/* 과 분리) */}
+          <Route path="/superadmin" component={PlatformAdmin} />
+          <Route path="/superadmin/shops" component={ShopsAdmin} />
+          <Route path="/superadmin/audit-logs" component={AuditLogs} />
+          {/* 예전 슈퍼관리자 주소 → 새 주소 */}
+          <Route path="/admin/platform"><Redirect to="/superadmin" replace /></Route>
+          <Route path="/admin/shops"><Redirect to="/superadmin/shops" replace /></Route>
           <Route path="/deposit/:id" component={Deposit} />
-          <Route path="/payment/success" component={PaymentSuccess} />
-          <Route path="/payment/fail" component={PaymentFail} />
           <Route path="/terms" component={Terms} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/refund" component={Refund} />

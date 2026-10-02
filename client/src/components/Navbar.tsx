@@ -33,10 +33,10 @@ export function Navbar() {
             <div className="flex items-center gap-1">
               {/* 슈퍼 어드민 메뉴 */}
               {user.role === 'super_admin' && (
-                <Link href="/admin/platform">
+                <Link href="/superadmin">
                   <button className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-full font-medium transition-all",
-                    location === "/admin/platform"
+                    location.startsWith("/superadmin")
                       ? "bg-secondary text-secondary-foreground"
                       : "text-foreground/70 hover:bg-secondary/30"
                   )} data-testid="link-platform">

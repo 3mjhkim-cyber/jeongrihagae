@@ -1,8 +1,8 @@
 /**
- * PlatformAdmin.tsx — 슈퍼관리자 플랫폼 대시보드 (/admin/platform)
+ * PlatformAdmin.tsx — 슈퍼관리자 플랫폼 대시보드 (/superadmin)
  *
  * 역할: KPI 요약 + 최근 등록 가맹점 미리보기
- * 전체 가맹점 목록·검색·편집은 /admin/shops (ShopsAdmin.tsx)에서 관리한다.
+ * 전체 가맹점 목록·검색·편집은 /superadmin/shops (ShopsAdmin.tsx)에서 관리한다.
  *
  * [변경 이력]
  * - 가맹점 관리 박스(탭·검색·스크롤 목록)를 ShopsAdmin.tsx 로 분리
@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
   Loader2, Store, Calendar, LogOut, Settings, ChevronRight,
-  ArrowRight, Users, TrendingUp, User,
+  ArrowRight, Users, TrendingUp, User, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,10 +109,20 @@ export default function PlatformAdmin() {
               <p className="text-xs text-muted-foreground hidden sm:block">총 관리자 대시보드</p>
             </div>
           </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => setLocation("/superadmin/audit-logs")}
+            data-testid="button-audit-logs"
+          >
+            <History className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">변경 기록</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={() => logout()} data-testid="button-logout" className="flex-shrink-0">
             <LogOut className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">로그아웃</span>
           </Button>
+          </div>
         </div>
       </header>
 
@@ -164,7 +174,7 @@ export default function PlatformAdmin() {
             {/* 전체 가맹점 관리 페이지로 이동 */}
             <Button
               variant="outline" size="sm"
-              onClick={() => setLocation("/admin/shops")}
+              onClick={() => setLocation("/superadmin/shops")}
               className="gap-1 flex-shrink-0 text-xs sm:text-sm px-2 sm:px-3"
               data-testid="button-go-shops-admin"
             >
@@ -188,13 +198,13 @@ export default function PlatformAdmin() {
             ) : (
               recentShops.map(shop => (
                 /*
-                 * 미리보기 행 — 클릭 시 /admin/shops 로 이동
+                 * 미리보기 행 — 클릭 시 /superadmin/shops 로 이동
                  * (전체 목록에서 해당 가맹점 검색/확인)
                  */
                 <button
                   key={shop.id}
                   className="w-full text-left px-5 py-4 hover:bg-secondary/30 transition-colors flex items-center justify-between group"
-                  onClick={() => setLocation("/admin/shops")}
+                  onClick={() => setLocation("/superadmin/shops")}
                   data-testid={`preview-shop-${shop.id}`}
                 >
                   {/* 왼쪽: 가맹점명 + 상태배지 / 로그인 아이디 */}
@@ -226,7 +236,7 @@ export default function PlatformAdmin() {
             <div className="px-5 py-3 border-t bg-secondary/10">
               <Button
                 variant="ghost" size="sm"
-                onClick={() => setLocation("/admin/shops")}
+                onClick={() => setLocation("/superadmin/shops")}
                 className="w-full gap-2 text-primary hover:text-primary"
               >
                 <Store className="w-4 h-4" />

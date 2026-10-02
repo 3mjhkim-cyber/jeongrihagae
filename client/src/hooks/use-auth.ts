@@ -55,7 +55,7 @@ export function useAuth() {
           title: "환영합니다!",
           description: "관리자님 로그인되었습니다.",
         });
-        setLocation("/admin/platform");
+        setLocation("/superadmin");
       } else {
         toast({
           title: "환영합니다!",

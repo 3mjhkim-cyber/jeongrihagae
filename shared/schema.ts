@@ -51,6 +51,20 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ─── 슈퍼관리자 변경 기록 ────────────────────────────────────────────────────────
+// 요금·창립 멤버·알림톡 한도 변경 시 남긴다. 매장이 삭제돼도 기록은 남도록 shop 은 FK 없이 이름을 같이 저장.
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id"),
+  adminEmail: text("admin_email"),
+  action: text("action").notNull(), // base_price | founding_on | founding_off | message_limit | message_limit_enforced
+  shopId: integer("shop_id"),
+  shopName: text("shop_name"),
+  before: text("before"),
+  after: text("after"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -205,6 +219,8 @@ export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
 export type InsertUserPayment = typeof userPayments.$inferInsert;
 
 export type AppSetting = typeof appSettings.$inferSelect;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type InsertAdminAuditLog = typeof adminAuditLogs.$inferInsert;
 
 export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type InsertNotificationLog = typeof notificationLogs.$inferInsert;
