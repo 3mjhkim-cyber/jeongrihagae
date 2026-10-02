@@ -56,7 +56,7 @@ export default function Login() {
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
     if (user) {
-      const targetPath = user.role === 'super_admin' ? '/admin/platform' : '/admin/dashboard';
+      const targetPath = user.role === 'super_admin' ? '/superadmin' : '/admin/dashboard';
       setLocation(targetPath);
     }
   }, [user, setLocation]);

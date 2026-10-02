@@ -1,4 +1,4 @@
-import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, appSettings, notificationLogs, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
+import { users, services, bookings, customers, shops, subscriptions, userSubscriptions, userPayments, appSettings, notificationLogs, adminAuditLogs, type AdminAuditLog, type InsertAdminAuditLog, type User, type InsertUser, type Service, type InsertService, type Booking, type InsertBooking, type Customer, type InsertCustomer, type Shop, type InsertShop, type Subscription, type InsertSubscription, type UserSubscription, type UserPayment, type InsertUserSubscription, type InsertUserPayment } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, and, count, gte, lte, sql, inArray } from "drizzle-orm";
 
@@ -96,6 +96,10 @@ export interface IStorage {
 
   // 알림톡 사용량: since 이후 성공 발송 건수
   countSentMessagesSince(shopId: number, since: Date): Promise<number>;
+
+  // 슈퍼관리자 변경 기록
+  createAuditLog(data: InsertAdminAuditLog): Promise<void>;
+  getAuditLogs(limit: number): Promise<AdminAuditLog[]>;
 
   // 창립 멤버
   countFoundingMembers(): Promise<number>;
@@ -959,6 +963,14 @@ export class DatabaseStorage implements IStorage {
         ),
       );
     return Number(row?.value ?? 0);
+  }
+
+  async createAuditLog(data: InsertAdminAuditLog): Promise<void> {
+    await db.insert(adminAuditLogs).values(data);
+  }
+
+  async getAuditLogs(limit: number): Promise<AdminAuditLog[]> {
+    return db.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt), desc(adminAuditLogs.id)).limit(limit);
   }
 
   async countFoundingMembers(): Promise<number> {

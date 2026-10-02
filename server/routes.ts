@@ -193,6 +193,28 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 // Super Admin 권한 체크
+const wonText = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+
+/** 슈퍼관리자 변경 기록 저장. 기록 실패가 실제 변경을 막지 않도록 오류는 로그만 남긴다. */
+async function writeAuditLog(
+  req: any,
+  entry: { action: string; shopId?: number; shopName?: string; before?: string; after?: string },
+): Promise<void> {
+  try {
+    await storage.createAuditLog({
+      adminUserId: req.user?.id ?? null,
+      adminEmail: req.user?.email ?? null,
+      action: entry.action,
+      shopId: entry.shopId ?? null,
+      shopName: entry.shopName ?? null,
+      before: entry.before ?? null,
+      after: entry.after ?? null,
+    });
+  } catch (err) {
+    console.error('[audit] 변경 기록 저장 실패', entry, err);
+  }
+}
+
 function requireSuperAdmin(req: any, res: any, next: any) {
   if (!req.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
@@ -631,89 +653,6 @@ export async function registerRoutes(
     }
   });
 
-  // 포트원 결제 검증
-  app.post('/api/payment/confirm', requireAuth, async (req, res) => {
-    try {
-      const { paymentId, txId, tier } = req.body;
-      const user = req.user as any;
-
-      if (!user.shopId) {
-        return res.status(400).json({ message: "가맹점 정보가 없습니다." });
-      }
-
-      if (!paymentId) {
-        return res.status(400).json({ message: "결제 정보가 올바르지 않습니다." });
-      }
-
-      // 포트원 API로 결제 검증
-      const portoneApiSecret = process.env.PORTONE_API_SECRET;
-      if (!portoneApiSecret) {
-        return res.status(500).json({ message: "결제 시스템 설정 오류입니다." });
-      }
-
-      const response = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
-        headers: {
-          'Authorization': `PortOne ${portoneApiSecret}`,
-        },
-      });
-
-      const paymentData = await response.json();
-
-      if (!response.ok || paymentData.status !== 'PAID') {
-        console.error('PortOne Payment Error:', paymentData);
-        return res.status(400).json({ message: '결제 검증에 실패했습니다.' });
-      }
-
-      // 플랜별 금액 검증
-      const PLAN_PRICES: Record<string, number> = {
-        basic: 9900,
-        premium: 49000,
-        enterprise: 99000,
-      };
-      const expectedAmount = PLAN_PRICES[tier || 'basic'];
-      if (paymentData.amount?.total !== expectedAmount) {
-        console.error('PortOne Amount Mismatch:', paymentData.amount?.total, expectedAmount);
-        return res.status(400).json({ message: '결제 금액이 일치하지 않습니다.' });
-      }
-
-      // 결제 성공 - 구독 활성화
-      const now = new Date();
-      const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30일 후
-
-      await storage.updateShopSubscription(user.shopId, {
-        subscriptionStatus: 'active',
-        subscriptionTier: tier || 'basic',
-        subscriptionStart: now,
-        subscriptionEnd: subscriptionEnd,
-      });
-
-      // 결제 기록 저장
-      await storage.createSubscription({
-        shopId: user.shopId,
-        tier: tier || 'basic',
-        status: 'active',
-        amount: expectedAmount,
-        startDate: now,
-        endDate: subscriptionEnd,
-        autoRenew: true,
-        paymentMethod: paymentData.method?.type || 'card',
-      });
-
-      res.json({
-        success: true,
-        message: '결제가 완료되었습니다.',
-        subscription: {
-          status: 'active',
-          tier: tier || 'basic',
-          endDate: subscriptionEnd,
-        },
-      });
-    } catch (error: any) {
-      console.error('Payment confirm error:', error);
-      res.status(500).json({ message: error.message || '결제 처리 중 오류가 발생했습니다.' });
-    }
-  });
-
 
   // 가맹점 등록 (등록 즉시 활성화 — 승인 절차 없음)
   app.post('/api/shops/register', async (req, res) => {
@@ -870,8 +809,11 @@ export async function registerRoutes(
     if (!Number.isInteger(basePrice) || basePrice < 1000 || basePrice > 1_000_000) {
       return res.status(400).json({ message: '기본요금은 1,000원 ~ 1,000,000원 사이의 정수로 입력해주세요.' });
     }
+    const { basePrice: beforePrice } = await getPricingSettings();
     await storage.setSetting(PRICING_KEYS.basePrice, String(basePrice));
-    console.log(`[admin] 기본요금 변경: ${basePrice}원 by userId=${(req.user as any).id}`);
+    if (beforePrice !== basePrice) {
+      await writeAuditLog(req, { action: 'base_price', before: wonText(beforePrice), after: wonText(basePrice) });
+    }
     const settings = await getPricingSettings();
     const foundingCount = await storage.countFoundingMembers();
     res.json({ ...settings, foundingCount });
@@ -884,7 +826,8 @@ export async function registerRoutes(
     if (!Number.isInteger(shopId) || typeof enabled !== 'boolean') {
       return res.status(400).json({ message: '요청 형식이 올바르지 않습니다.' });
     }
-    const { foundingPrice, foundingLimit } = await getPricingSettings();
+    const { basePrice, foundingPrice, foundingLimit } = await getPricingSettings();
+    const beforeShop = await storage.getShop(shopId);
     const result = await storage.setFoundingMember(shopId, enabled, foundingPrice, foundingLimit);
     if (result.limitReached) {
       return res.status(409).json({ message: `창립 멤버는 최대 ${foundingLimit}곳까지 지정할 수 있습니다.` });
@@ -892,9 +835,15 @@ export async function registerRoutes(
     if (!result.shop) {
       return res.status(404).json({ message: "가맹점을 찾을 수 없습니다." });
     }
-    console.log(
-      `[admin] 창립 멤버 ${enabled ? '지정' : '해제'}: shopId=${shopId} by userId=${(req.user as any).id}`,
-    );
+    if (beforeShop && beforeShop.isFoundingMember !== enabled) {
+      await writeAuditLog(req, {
+        action: enabled ? 'founding_on' : 'founding_off',
+        shopId,
+        shopName: beforeShop.name,
+        before: wonText(priceForShop(beforeShop, basePrice)),
+        after: wonText(priceForShop(result.shop, basePrice)),
+      });
+    }
     const foundingCount = await storage.countFoundingMembers();
     res.json({ shop: result.shop, foundingCount, foundingLimit });
   });
@@ -910,8 +859,15 @@ export async function registerRoutes(
     if (typeof enforced !== 'boolean') {
       return res.status(400).json({ message: '요청 형식이 올바르지 않습니다.' });
     }
+    const beforeEnforced = await isMessageLimitEnforced();
     await setMessageLimitEnforced(enforced);
-    console.log(`[admin] 알림톡 한도 차단 ${enforced ? 'ON' : 'OFF'} by userId=${(req.user as any).id}`);
+    if (beforeEnforced !== enforced) {
+      await writeAuditLog(req, {
+        action: 'message_limit_enforced',
+        before: beforeEnforced ? '차단 켜짐' : '차단 꺼짐',
+        after: enforced ? '차단 켜짐' : '차단 꺼짐',
+      });
+    }
     res.json({ enforced, limitOptions: MESSAGE_LIMIT_OPTIONS });
   });
 
@@ -922,10 +878,25 @@ export async function registerRoutes(
     if (!Number.isInteger(shopId) || !(MESSAGE_LIMIT_OPTIONS as readonly number[]).includes(limit)) {
       return res.status(400).json({ message: `한도는 ${MESSAGE_LIMIT_OPTIONS.join(' / ')}통 중에서 선택해주세요.` });
     }
+    const beforeShop = await storage.getShop(shopId);
+    if (!beforeShop) return res.status(404).json({ message: "가맹점을 찾을 수 없습니다." });
     const shop = await storage.updateShop(shopId, { messageLimit: limit });
     if (!shop) return res.status(404).json({ message: "가맹점을 찾을 수 없습니다." });
-    console.log(`[admin] 알림톡 한도 변경: shopId=${shopId} → ${limit}통 by userId=${(req.user as any).id}`);
+    if (beforeShop.messageLimit !== limit) {
+      await writeAuditLog(req, {
+        action: 'message_limit',
+        shopId,
+        shopName: beforeShop.name,
+        before: `${beforeShop.messageLimit}통`,
+        after: `${limit}통`,
+      });
+    }
     res.json(shop);
+  });
+
+  // 변경 기록 조회 (최근 300건)
+  app.get('/api/admin/audit-logs', requireSuperAdmin, async (_req, res) => {
+    res.json(await storage.getAuditLogs(300));
   });
 
   // 슈퍼관리자용 가맹점 정보 수정
@@ -1857,64 +1828,6 @@ export async function registerRoutes(
    */
 
   // 자체 카드 폼 → 포트원 REST API로 빌링키 직접 발급 (PG 팝업 없음)
-  app.post('/api/payment/demo-confirm', requireSuperAdmin, async (req, res) => {
-    try {
-      const { tier, amount } = req.body;
-      const user = req.user as any;
-
-      if (!user.shopId) {
-        return res.status(400).json({ message: "가맹점 정보가 없습니다." });
-      }
-
-      const PLAN_PRICES: Record<string, number> = {
-        basic: 9900,
-        premium: 49000,
-        enterprise: 99000,
-      };
-
-      const validTier = tier && PLAN_PRICES[tier] ? tier : 'basic';
-      const expectedAmount = PLAN_PRICES[validTier];
-
-      if (amount !== expectedAmount) {
-        return res.status(400).json({ message: '결제 금액이 일치하지 않습니다.' });
-      }
-
-      const now = new Date();
-      const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      await storage.updateShopSubscription(user.shopId, {
-        subscriptionStatus: 'active',
-        subscriptionTier: validTier,
-        subscriptionStart: now,
-        subscriptionEnd: subscriptionEnd,
-      });
-
-      await storage.createSubscription({
-        shopId: user.shopId,
-        tier: validTier,
-        status: 'active',
-        amount: expectedAmount,
-        startDate: now,
-        endDate: subscriptionEnd,
-        autoRenew: true,
-        paymentMethod: 'demo',
-      });
-
-      res.json({
-        success: true,
-        message: '데모 결제가 완료되었습니다.',
-        subscription: {
-          status: 'active',
-          tier: validTier,
-          endDate: subscriptionEnd,
-        },
-      });
-    } catch (error: any) {
-      console.error('Demo payment error:', error);
-      res.status(500).json({ message: error.message || '결제 처리 중 오류가 발생했습니다.' });
-    }
-  });
-
   app.post('/api/subscription/issue-billing-key-direct', requireAuth, async (req, res) => {
     const user = req.user as any;
     const { cardNumber, expiryYear, expiryMonth, birth, passwordTwoDigits } = req.body;

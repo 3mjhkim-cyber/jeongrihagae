@@ -1,5 +1,5 @@
 /**
- * ShopsAdmin.tsx — 가맹점 관리 전용 페이지 (/admin/shops)
+ * ShopsAdmin.tsx — 가맹점 관리 전용 페이지 (/superadmin/shops)
  *
  * 기능:
  * - 탭: 전체 가맹점 / 활성 가맹점 / 비활성 가맹점
@@ -7,7 +7,7 @@
  * - 클라이언트 페이지네이션: 페이지당 10개
  * - 가맹점 행 클릭 → 상세 모달 (로그인 아이디·가입일·구독정보 등)
  * - 상세 모달 내 편집·삭제 버튼
- * - PlatformAdmin(/admin/platform)으로 돌아가기 버튼
+ * - PlatformAdmin(/superadmin)으로 돌아가기 버튼
  *
  * [1] 로그인 아이디 표시
  *   - 상세 모달 "로그인 아이디" 항목에 ownerEmail 표시 (ownerEmail은 API에서 JOIN해 반환)
@@ -417,7 +417,7 @@ export default function ShopsAdmin() {
             <Button
               variant="ghost" size="sm"
               className="gap-1 text-muted-foreground hover:text-foreground px-2 flex-shrink-0"
-              onClick={() => setLocation("/admin/platform")}
+              onClick={() => setLocation("/superadmin")}
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">돌아가기</span>
