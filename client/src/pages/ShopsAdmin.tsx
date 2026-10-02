@@ -134,6 +134,18 @@ function SubDetailBadge({ status }: { status: string | null }) {
   return <Badge variant="secondary">비활성</Badge>;
 }
 
+/** 편집 창 "변경 안 함" 옵션에 보여줄 현재 상태 */
+function statusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case "trialing":        return "무료체험 중";
+    case "pending_payment": return "결제 필요";
+    case "past_due":        return "결제 실패";
+    case "cancelled":       return "해지";
+    case "expired":         return "만료";
+    default:                return "구독 없음";
+  }
+}
+
 function won(n: number | null | undefined): string {
   return n != null ? `${n.toLocaleString()}원` : "-";
 }
@@ -297,7 +309,12 @@ export default function ShopsAdmin() {
   // ── Mutation: 편집 ────────────────────────────────────────────────────────
   const editMutation = useMutation({
     mutationFn: async ({ shopId, data }: { shopId: number; data: typeof editForm }) => {
-      const res = await apiRequest("PATCH", `/api/admin/shops/${shopId}`, data);
+      // "변경 안 함"이면 구독 상태 관련 값은 보내지 않는다
+      const { subscriptionStatus, subscriptionStart, subscriptionEnd, ...rest } = data;
+      const body = subscriptionStatus === "keep"
+        ? rest
+        : { ...rest, subscriptionStatus, subscriptionStart, subscriptionEnd };
+      const res = await apiRequest("PATCH", `/api/admin/shops/${shopId}`, body);
       return res.json();
     },
     onSuccess: () => {
@@ -334,10 +351,11 @@ export default function ShopsAdmin() {
       businessHours:      shop.businessHours,
       depositAmount:      shop.depositAmount,
       depositRequired:    shop.depositRequired,
+      // 활성/비활성이 아니면(무료체험·결제 필요 등) "변경 안 함"으로 시작한다.
+      // 목록에 없는 값을 넣으면 select 가 첫 항목(활성)을 보여줘서 실제 저장값과 화면이 어긋난다.
       subscriptionStatus: shop.subscriptionStatus === "active" ? "active"
-        : shop.subscriptionStatus === "trialing" ? "trialing"
-        : shop.subscriptionStatus === "inactive"  ? "inactive"
-        : "trialing",
+        : shop.subscriptionStatus === "inactive" ? "inactive"
+        : "keep",
       subscriptionStart:  shop.subscriptionStart
         ? new Date(shop.subscriptionStart).toISOString().split("T")[0] : "",
       subscriptionEnd:    shop.subscriptionEnd
@@ -965,6 +983,9 @@ export default function ShopsAdmin() {
                   value={editForm.subscriptionStatus}
                   onChange={e => setEditForm({ ...editForm, subscriptionStatus: e.target.value })}
                 >
+                  {editingShop?.subscriptionStatus !== "active" && editingShop?.subscriptionStatus !== "inactive" && (
+                    <option value="keep">변경 안 함 (현재: {statusLabel(editingShop?.subscriptionStatus)})</option>
+                  )}
                   <option value="active">활성 (유료 구독)</option>
                   {(editingShop?.subscriptionStatus === "trialing" ||
                     (editingShop?.trialEndDate && new Date(editingShop.trialEndDate) > new Date())) && (

@@ -944,11 +944,12 @@ export async function registerRoutes(
         // 무료체험 유지: shop 레벨 상태를 'none'으로 돌려 userSubscriptions가 관리
         updates.subscriptionStatus = 'none';
         updates.subscriptionEnd = null;
-      } else {
+      } else if (subscriptionStatus === 'inactive') {
         // inactive: 무료체험 중이어도 강제 차단
         updates.subscriptionStatus = 'inactive';
         updates.subscriptionEnd = null;
       }
+      // 그 밖의 값은 무시 (구독 상태 변경 없음)
     }
 
     const shop = await storage.updateShop(Number(req.params.id), updates);
@@ -1725,6 +1726,27 @@ export async function registerRoutes(
     }
 
     const sub = await storage.getUserSubscription(user.id);
+
+    // 관리자가 수동으로 유료 활성화한 매장: requireActiveSubscription 과 같은 기준으로
+    // 빌링 구독(체험 종료·결제 필요 등)보다 우선한다. 실제 빌링 구독이 active 면 그쪽 정보를 쓴다.
+    if (user.shopId && sub?.status !== 'active') {
+      const shop = await storage.getShop(user.shopId);
+      const end = shop?.subscriptionEnd ? new Date(shop.subscriptionEnd) : null;
+      if (shop?.subscriptionStatus === 'active' && (!end || end > new Date())) {
+        return res.json({
+          status: 'active',
+          nextBillingDate: shop.subscriptionEnd ?? null,
+          lastBillingAt: shop.subscriptionStart ?? null,
+          planPrice,
+          failCount: 0,
+          daysUntilTrialEnd: null,
+          showPaymentNudge: false,
+          isLocked: false,
+          manualActivation: true,
+        });
+      }
+    }
+
     if (!sub) {
       // userSubscriptions 레코드가 없어도 shop 레벨 구독 상태를 fallback으로 확인
       if (user.shopId) {
