@@ -12,7 +12,7 @@
 import { SolapiMessageService } from "solapi";
 import { storage } from "./storage";
 import { db } from "./db";
-import { notificationLogs } from "@shared/schema";
+import { notificationLogs, type Shop } from "@shared/schema";
 
 /**
  * 알림 유형 키
@@ -117,13 +117,17 @@ export function currentPeriod(anchor: Date, now = new Date()): { start: Date; en
 }
 
 /**
- * 한도 기간의 기준일: 마지막 결제일 → 무료체험 시작일 → 매장 가입일 순.
- * 결제가 될 때마다 마지막 결제일이 바뀌므로 한도도 결제일에 맞춰 초기화된다.
+ * 한도 기간의 기준일
+ * 1. 카카오페이 정기결제 중이면 마지막 결제일 (결제될 때마다 바뀌어 결제일에 맞춰 초기화)
+ * 2. 관리자가 수동으로 유료 활성화한 매장이면 활성화 시작일
+ * 3. 그 외: 마지막 결제일 → 무료체험 시작일 → 매장 가입일 순
  */
-async function getPeriodAnchor(shopId: number, shopCreatedAt: Date): Promise<Date> {
-  const owner = await storage.getUserByShopId(shopId);
+async function getPeriodAnchor(shop: Shop): Promise<Date> {
+  const owner = await storage.getUserByShopId(shop.id);
   const sub = owner ? await storage.getUserSubscription(owner.id) : undefined;
-  return new Date(sub?.lastBillingAt ?? sub?.trialStartDate ?? shopCreatedAt);
+  if (sub?.status === 'active' && sub.lastBillingAt) return new Date(sub.lastBillingAt);
+  if (shop.subscriptionStatus === 'active' && shop.subscriptionStart) return new Date(shop.subscriptionStart);
+  return new Date(sub?.lastBillingAt ?? sub?.trialStartDate ?? shop.createdAt);
 }
 
 export async function isMessageLimitEnforced(): Promise<boolean> {
@@ -147,7 +151,7 @@ export interface MessageUsage {
 export async function getMessageUsage(shopId: number): Promise<MessageUsage | undefined> {
   const shop = await storage.getShop(shopId);
   if (!shop) return undefined;
-  const anchor = await getPeriodAnchor(shopId, shop.createdAt);
+  const anchor = await getPeriodAnchor(shop);
   const { start, end } = currentPeriod(anchor);
   const [used, enforced] = await Promise.all([
     storage.countSentMessagesSince(shopId, start),
