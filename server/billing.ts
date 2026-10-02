@@ -9,9 +9,6 @@
  * PORTONE_API_SECRET 이 없으면 스텁 모드(개발/테스트용)로 동작합니다.
  */
 
-/** 단일 플랜 가격 (KRW) */
-export const PLAN_PRICE = 9_900;
-
 /** 결제 최대 재시도 횟수 (3일 연속 1일 1회) */
 export const MAX_FAIL_COUNT = 3;
 
@@ -53,13 +50,14 @@ export async function chargeBillingKey(
   billingKey: string,
   userId: number,
   orderId: string,
+  amount: number,
 ): Promise<BillingResult> {
   const apiSecret = process.env.PORTONE_API_SECRET;
 
   // ── 개발/테스트 스텁 ──────────────────────────────────────────────────────
   if (!apiSecret) {
     console.log(
-      `[billing stub] userId=${userId} orderId=${orderId} amount=${PLAN_PRICE}KRW`,
+      `[billing stub] userId=${userId} orderId=${orderId} amount=${amount}KRW`,
     );
     return { success: true, txId: `stub_${orderId}` };
   }
@@ -67,13 +65,18 @@ export async function chargeBillingKey(
   // ── 실제 PortOne V2 API 호출 ─────────────────────────────────────────────
   // POST /payments/{paymentId}/billing-key
   //   storeId, billingKey, channelKey, orderName, amount, currency, customer
+  // 빌링키는 클라이언트(Subscription.tsx)에서 카카오페이 채널 키로 발급되므로,
+  // 결제도 같은 채널 키 우선순위를 따라야 채널이 어긋나지 않는다.
   const body = {
     storeId: process.env.VITE_PORTONE_STORE_ID || process.env.PORTONE_STORE_ID,
     billingKey,
-    channelKey: process.env.VITE_PORTONE_CHANNEL_KEY || process.env.PORTONE_CHANNEL_KEY,
+    channelKey:
+      process.env.VITE_PORTONE_CHANNEL_KEY_KAKAOPAY ||
+      process.env.VITE_PORTONE_CHANNEL_KEY ||
+      process.env.PORTONE_CHANNEL_KEY,
     orderName: "펫그루머 서비스 월정액",
     customer: { id: String(userId) },
-    amount: { total: PLAN_PRICE },
+    amount: { total: amount },
     currency: "KRW",
   };
 

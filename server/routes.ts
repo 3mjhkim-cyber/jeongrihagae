@@ -11,7 +11,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import MemoryStore from "memorystore";
 import { insertShopSchema, Shop } from "@shared/schema";
-import { chargeBillingKey, PLAN_PRICE } from "./billing";
+import { chargeBillingKey } from "./billing";
+import { ensurePricingSettings, getPricingSettings, getUserPrice, priceForShop, PRICING_KEYS } from "./pricing";
 import { addOneMonth } from "./scheduler";
 import { Webhook } from "@portone/server-sdk";
 
@@ -397,6 +398,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // 요금 설정이 비어 있으면 초기값으로 채운다 (스케줄러보다 먼저 실행되어야 함)
+  await ensurePricingSettings();
+
   // SSE: shopId → 연결된 대시보드 클라이언트 목록
   const shopSseClients = new Map<number, Set<any>>();
 
@@ -954,6 +958,8 @@ export async function registerRoutes(
     const userIds = Object.values(shopIdToUserId);
     const subMap = await storage.getUserSubscriptionsByUserIds(userIds);
 
+    const { basePrice } = await getPricingSettings();
+
     const result = shops.map(s => {
       const userId = shopIdToUserId[s.id];
       const sub = userId != null ? subMap[userId] : undefined;
@@ -971,9 +977,53 @@ export async function registerRoutes(
         trialEndDate: sub?.trialEndDate ?? null,
         cancelReason: sub?.cancelReason ?? null,
         cancelNote: sub?.cancelNote ?? null,
+        // 이 매장의 현재 월 요금 (창립 멤버면 고정가)
+        monthlyPrice: priceForShop(s, basePrice),
       };
     });
     res.json(result);
+  });
+
+  // ── 요금 설정 (슈퍼관리자) ────────────────────────────────────────────────
+  app.get('/api/admin/pricing', requireSuperAdmin, async (_req, res) => {
+    const settings = await getPricingSettings();
+    const foundingCount = await storage.countFoundingMembers();
+    res.json({ ...settings, foundingCount });
+  });
+
+  // 기본요금 수정. 창립 멤버 매장은 각자 고정가가 있어 영향받지 않는다.
+  app.patch('/api/admin/pricing', requireSuperAdmin, async (req, res) => {
+    const basePrice = Number(req.body?.basePrice);
+    if (!Number.isInteger(basePrice) || basePrice < 1000 || basePrice > 1_000_000) {
+      return res.status(400).json({ message: '기본요금은 1,000원 ~ 1,000,000원 사이의 정수로 입력해주세요.' });
+    }
+    await storage.setSetting(PRICING_KEYS.basePrice, String(basePrice));
+    console.log(`[admin] 기본요금 변경: ${basePrice}원 by userId=${(req.user as any).id}`);
+    const settings = await getPricingSettings();
+    const foundingCount = await storage.countFoundingMembers();
+    res.json({ ...settings, foundingCount });
+  });
+
+  // 창립 멤버 지정/해제
+  app.post('/api/admin/shops/:id/founding', requireSuperAdmin, async (req, res) => {
+    const shopId = Number(req.params.id);
+    const enabled = req.body?.enabled;
+    if (!Number.isInteger(shopId) || typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: '요청 형식이 올바르지 않습니다.' });
+    }
+    const { foundingPrice, foundingLimit } = await getPricingSettings();
+    const result = await storage.setFoundingMember(shopId, enabled, foundingPrice, foundingLimit);
+    if (result.limitReached) {
+      return res.status(409).json({ message: `창립 멤버는 최대 ${foundingLimit}곳까지 지정할 수 있습니다.` });
+    }
+    if (!result.shop) {
+      return res.status(404).json({ message: "가맹점을 찾을 수 없습니다." });
+    }
+    console.log(
+      `[admin] 창립 멤버 ${enabled ? '지정' : '해제'}: shopId=${shopId} by userId=${(req.user as any).id}`,
+    );
+    const foundingCount = await storage.countFoundingMembers();
+    res.json({ shop: result.shop, foundingCount, foundingLimit });
   });
 
   // 슈퍼관리자용 가맹점 정보 수정
@@ -1085,6 +1135,12 @@ export async function registerRoutes(
       bankAccount, notificationExtraNote, notificationEnabled,
     } as any);
     res.json(shop);
+  });
+
+  // 공개 요금 정보 (랜딩 페이지 등 로그인 전 화면용)
+  app.get('/api/pricing', async (_req, res) => {
+    const { basePrice } = await getPricingSettings();
+    res.json({ basePrice });
   });
 
   // Public shop info
@@ -1765,6 +1821,7 @@ export async function registerRoutes(
    */
   app.get('/api/subscription', requireAuth, async (req, res) => {
     const user = req.user as any;
+    const planPrice = await getUserPrice(user.id);
 
     // 관리자 강제 비활성화 최우선 확인
     if (user.shopId) {
@@ -1789,7 +1846,7 @@ export async function registerRoutes(
             status: 'active',
             nextBillingDate: shop.subscriptionEnd ?? null,
             lastBillingAt: shop.subscriptionStart ?? null,
-            planPrice: PLAN_PRICE,
+            planPrice,
             failCount: 0,
             daysUntilTrialEnd: null,
             showPaymentNudge: false,
@@ -1801,7 +1858,7 @@ export async function registerRoutes(
             status: 'trialing',
             trialEndDate: shop.subscriptionEnd ?? null,
             nextBillingDate: null,
-            planPrice: PLAN_PRICE,
+            planPrice,
             failCount: 0,
             daysUntilTrialEnd: null,
             showPaymentNudge: false,
@@ -1809,7 +1866,7 @@ export async function registerRoutes(
           });
         }
       }
-      return res.json({ status: 'none' });
+      return res.json({ status: 'none', planPrice });
     }
 
     const today = new Date();
@@ -1827,7 +1884,7 @@ export async function registerRoutes(
       nextBillingDate: sub.nextBillingDate,
       lastBillingAt: sub.lastBillingAt,
       failCount: sub.failCount,
-      planPrice: PLAN_PRICE,
+      planPrice,
       // 프론트엔드 편의: 체험 남은 일수 (음수면 만료)
       daysUntilTrialEnd,
       // D-7 경고 표시 조건
@@ -2034,12 +2091,13 @@ export async function registerRoutes(
     // 첫 결제 시도
     const orderId = `sub_${user.id}_${randomBytes(6).toString('hex')}`;
     const now = new Date();
-    const result = await chargeBillingKey(billingKey, user.id, orderId);
+    const amount = await getUserPrice(user.id);
+    const result = await chargeBillingKey(billingKey, user.id, orderId, amount);
 
     // 결제 내역 기록
     await storage.createUserPayment({
       userId: user.id,
-      amount: PLAN_PRICE,
+      amount,
       attemptedAt: now,
       paidAt: result.success ? now : null,
       result: result.success ? 'success' : 'fail',
