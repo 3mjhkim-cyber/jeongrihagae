@@ -65,7 +65,7 @@ export function MessageUsageCard() {
         </p>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
-        {format(new Date(data.periodEnd), "M월 d일")} 결제일에 초기화됩니다.
+        {format(new Date(data.periodEnd), "M월 d일")}에 초기화됩니다.
       </p>
     </div>
   );
